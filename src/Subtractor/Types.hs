@@ -1,11 +1,16 @@
-{-# LANGUAGE DeriveFunctor #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+-- {-# LANGUAGE StandaloneDeriving #-}
+-- {-# LANGUAGE FlexibleInstances #-}
+-- {-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module Subtractor.Types where
 
 import Data.SBV
 import GHC.Generics
+import Data.Map
 import Control.Monad.State.Strict
+import Control.Monad.Writer.Strict
 
 -- | The 'Value' datatype represents data values. The precise
 -- bit-width is left unspecified, but it is assumed that it fits into 64 bits.
@@ -32,13 +37,18 @@ type MemoryAddress = SWord8
 -- | The memory is represented by a map from memory addresses to their values.
 type Memory = SFunArray Word8 Word64
 
+type Program = [(InstructionAddress, Instruction)]
+
+-- | Programs are stored in program memory (currently, up to 1024 instructions).
+type InstructionAddress = SWord16
+
+-- | Instructions have 16-bit codes.
+type InstructionCode = SWord16
+
 -- | Boolean 'Flag's indicate the current status of Subtractor.
 data Flag = Condition
           | Halted
           deriving (Enum, Eq, Ord, Show)
-
--- | Programs are stored in program memory (currently, up to 1024 instructions).
-type InstructionAddress = SWord16
 
 flagId :: Flag -> SWord8
 flagId = literal . fromIntegral . fromEnum
@@ -50,16 +60,63 @@ type Flags = SFunArray Word8 Bool
 -- effect of the 'Subtractor.Semantics.wait' instruction.
 type Clock = SWord64
 
+--------------------------------------------------------------------------------
+
+data Instruction = Halt
+                 | Ld    Register MemoryAddress
+                 | Ld_si Register SImm8
+                 | St    Register MemoryAddress
+                 | Sub   Register MemoryAddress
+                 | Jmpi  SImm10
+    deriving (Show, Eq)
+
+instance Mergeable Instruction where
+    symbolicMerge f t Halt Halt = Halt
+    symbolicMerge f t (Ld    rX1 dmemaddr1) (Ld    rX2 dmemaddr2) =
+        Ld (symbolicMerge f t rX1 rX2) (symbolicMerge f t dmemaddr1 dmemaddr2)
+    symbolicMerge f t (Ld_si rX1 simm1    ) (Ld_si rX2 simm2)     =
+        Ld_si (symbolicMerge f t rX1 rX2) (symbolicMerge f t simm1 simm2)
+    symbolicMerge f t (St    rX1 dmemaddr1) (St    rX2 dmemaddr2) =
+        St (symbolicMerge f t rX1 rX2) (symbolicMerge f t dmemaddr1 dmemaddr2)
+    symbolicMerge f t (Sub   rX1 dmemaddr1) (Sub   rX2 dmemaddr2) =
+        Sub (symbolicMerge f t rX1 rX2) (symbolicMerge f t dmemaddr1 dmemaddr2)
+    symbolicMerge f t (Jmpi  simm1        ) (Jmpi  simm2)         =
+        Jmpi (symbolicMerge f t simm1 simm2)
+    symbolicMerge _ _ a b =
+        error $ "Subtractor.Types: No least-upper-bound for " ++ show (a, b)
+--------------------------------------------------------------------------------
+
+type Script = Writer [Instruction] ()
+
+ld :: Register -> MemoryAddress -> Script
+ld rX dmemaddr = tell [Ld rX dmemaddr]
+
+ld_si :: Register -> SImm8 -> Script
+ld_si rX simm = tell [Ld_si rX simm]
+
+st :: Register -> MemoryAddress -> Script
+st rX dmemaddr = tell [St rX dmemaddr]
+
+sub :: Register -> MemoryAddress -> Script
+sub rX dmemaddr = tell [Sub rX dmemaddr]
+
+jmpi :: SImm10 -> Script
+jmpi simm = tell [Jmpi simm]
+
+halt :: Script
+halt = tell [Halt]
+
+assemble :: Script -> Program
+assemble s = zip [0..] prg
+  where
+    prg = snd $ runWriter s
+
 data MachineState = MachineState
     { registers           :: RegisterBank
     , instructionCounter  :: InstructionAddress
+    , instructionRegister :: Instruction
     , flags               :: Flags
     , memory              :: Memory
+    , program             :: Program
     , clock               :: Clock
-    } deriving (Show)
-
-newtype Machine a = Machine { runMachine :: State MachineState a }
-    deriving (Functor, Applicative, Monad, MonadState MachineState)
-
-execute :: Machine a -> MachineState -> (a, MachineState)
-execute = runState . runMachine
+    } deriving (Show, Generic, Mergeable)

@@ -1,8 +1,17 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
 module Subtractor.Verification where
 
 import Control.Monad.State.Strict
 import Data.SBV
 import Subtractor.Types
+
+
+newtype Machine a = Machine { runMachine :: State MachineState a }
+    deriving (Functor, Applicative, Monad, MonadState MachineState)
+
+run :: Machine a -> MachineState -> (a, MachineState)
+run = runState . runMachine
 
 -- | Advance the clock by a given number of clock cycles.
 delay :: Clock -> Machine ()
