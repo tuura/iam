@@ -21,7 +21,7 @@ dumpMemory from to m = map (readArray m) [literal from..literal to]
 templateState :: Script -> Memory -> MachineState
 templateState src mem = MachineState { registers = emptyRegisters
                                , instructionCounter = 0
-                               , instructionRegister = 0 -- Jmpi 0
+                               , instructionRegister = Jmpi 0
                                , program = assemble src
                                , flags = emptyFlags
                                , memory = mem
@@ -35,4 +35,4 @@ prover = z3 { verbose = True
             }
 
 steps :: Int
-steps = 15
+steps = 7

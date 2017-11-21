@@ -12,7 +12,7 @@ import Subtractor.Assembly
 data MachineState = MachineState
     { registers           :: RegisterBank
     , instructionCounter  :: InstructionAddress
-    , instructionRegister :: InstructionCode -- Instruction
+    , instructionRegister :: Instruction
     , flags               :: Flags
     , memory              :: Memory
     , program             :: Program

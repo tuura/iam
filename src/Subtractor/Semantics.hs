@@ -23,120 +23,66 @@ fromSImm10 s = fromBitsLE $ (take 10 $ blastLE s) ++ replicate 6 (sTestBit s 9)
 
 --------------------------------------------------------------------------------
 
--- execute :: Instruction -> Machine ()
--- execute (Halt             ) = writeFlag Halted true
--- execute (Ld    rX dmemaddr) = readMemory dmemaddr >>= writeRegister rX
--- execute (Ld_si rX simm    ) = (writeRegister rX $ fromSImm8 simm)
--- execute (St    rX dmemaddr) = readRegister rX >>= writeMemory dmemaddr
--- execute (Sub   rX dmemaddr) = do
---     x <- readRegister rX
---     y <- readMemory dmemaddr
---     let z = x - y
---     writeFlag Zero (z .== 0)
---     writeRegister rX z
--- execute (Jmpi  simm       ) =
---     modify $ \currentState ->
---         currentState {instructionCounter =
---             instructionCounter currentState + fromSImm10 simm}
--- execute (Jz simm          ) = do
---     zeroIsSet <- readFlag Zero
---     ic <- instructionCounter <$> get
---     let ic' = ite zeroIsSet (ic + fromSImm10 simm) ic
---     -- let ic' = ic
---     modify $ \currentState ->
---         currentState {instructionCounter = ic'}
---     -- condition <- readFlag Zero
---     -- state <- get
---     -- let jumpState = snd $ run (jmpi simm) state
---     -- put $ ite condition jumpState state
-
--- execute :: InstructionCode -> Machine ()
--- execute c =
---     case decodeOpcode c of
---         0b000000 -> halt
---         0b000001 -> let rX = decodeRegister c
---                         dmemaddr = decodeMemoryAddress c
---                     in ld rX dmemaddr
---         0b000010 -> let rX = decodeRegister c
---                         simm = decodeSImm8 c
---                     in ld_si rX simm
---         0b000011 -> let rX = decodeRegister c
---                         dmemaddr = decodeMemoryAddress c
---                     in st rX dmemaddr
---         0b000100 -> let rX = decodeRegister c
---                         dmemaddr = decodeMemoryAddress c
---                     in sub rX dmemaddr
---         0b000101 -> let simm = decodeSImm10 c
---                     in jmpi simm
---         0b000110 -> let simm = decodeSImm10 c
---                     in jz simm
---         _        -> halt
-execute :: InstructionCode -> MachineState -> MachineState
-execute c currentState =
-    -- case decodeOpcode c of
-    --     0b000000 -> snd $ run halt currentState
-    --     0b000001 -> let rX = decodeRegister c
-    --                     dmemaddr = decodeMemoryAddress c
-    --                 in snd $ run (ld rX dmemaddr) currentState
-    --     0b000010 -> let rX = decodeRegister c
-    --                     simm = decodeSImm8 c
-    --                 in snd $ run (ld_si rX simm) currentState
-    --     0b000011 -> let rX = decodeRegister c
-    --                     dmemaddr = decodeMemoryAddress c
-    --                 in snd $ run (st rX dmemaddr) currentState
-    --     0b000100 -> let rX = decodeRegister c
-    --                     dmemaddr = decodeMemoryAddress c
-    --                 in snd $ run (sub rX dmemaddr) currentState
-    --     0b000101 -> let simm = decodeSImm10 c
-    --                 in snd $ run (jmpi simm) currentState
-    --     0b000110 -> let simm = decodeSImm10 c
-    --                 in snd $ run (jz simm) currentState
-    --     _        -> snd $ run halt currentState
-    let oc = decodeOpcode c
-    in ite (oc .== 0b000001)
-           (let rX = decodeRegister c
-                dmemaddr = decodeMemoryAddress c
-            in snd $ run (ld rX dmemaddr) currentState) $
-            ite (oc .== 0b000010)
-                (let rX = decodeRegister c
-                     simm = decodeSImm8 c
-                 in snd $ run (ld_si rX simm) currentState) $
-                 ite (oc .== 0b000011)
-                     (let rX = decodeRegister c
-                          dmemaddr = decodeMemoryAddress c
-                     in snd $ run (st rX dmemaddr) currentState) $
-                     ite (oc .== 0b000100)
-                         (let rX = decodeRegister c
-                              dmemaddr = decodeMemoryAddress c
-                         in snd $ run (sub rX dmemaddr) currentState) $
-                         ite (oc .== 0b000101)
-                             (let simm = decodeSImm10 c
-                             in snd $ run (jmpi simm) currentState) $
-                             ite (oc .== 0b000110)
-                                 (let simm = decodeSImm10 c
-                                 in snd $ run (jz simm) currentState) $ snd $ run (halt) currentState
+execute :: Instruction -> Machine ()
+execute (Halt             ) = writeFlag Halted true
+execute (Ld    rX dmemaddr) = readMemory dmemaddr >>= writeRegister rX
+execute (Ld_si rX simm    ) = (writeRegister rX $ fromSImm8 simm)
+execute (St    rX dmemaddr) = readRegister rX >>= writeMemory dmemaddr
+execute (Sub   rX dmemaddr) = do
+    x <- readRegister rX
+    y <- readMemory dmemaddr
+    let z = x - y
+    writeFlag Zero (z .== 0)
+    writeRegister rX z
+execute (Jmpi  simm       ) =
+    modify $ \currentState ->
+        currentState {instructionCounter =
+            instructionCounter currentState + fromSImm10 simm}
+execute (Jz simm          ) = do
+    zeroIsSet <- readFlag Zero
+    ic <- instructionCounter <$> get
+    let ic' = ite zeroIsSet (ic + fromSImm10 simm) ic
+    -- let ic' = ic
+    modify $ \currentState ->
+        currentState {instructionCounter = ic'}
+    -- condition <- readFlag Zero
+    -- state <- get
+    -- let jumpState = snd $ run (jmpi simm) state
+    -- put $ ite condition jumpState state
 
 executeInstruction :: Machine ()
 executeInstruction = do
     fetchInstruction
     incrementInstructionCounter
-    (modify . execute) =<< readInstructionRegister
+    execute =<< readInstructionRegister
 
 fetchInstruction :: Machine ()
 fetchInstruction =
     get >>= readProgram . instructionCounter >>= writeInstructionRegister
 
-readProgram :: InstructionAddress -> Machine InstructionCode -- Instruction
+readProgram :: InstructionAddress -> Machine Instruction
 readProgram addr = do
     currentState <- get
     delay 1
-    -- pure $ Jmpi 0
-    pure $ readArray (program currentState) addr
+    -- let instr = case lookupInstruction addr (program currentState) of
+    --                 Nothing -> Halt
+    --                 Just i  -> i
+    -- pure instr
+    pure $ lookupInstruction addr (program currentState)
+    where
+        -- lookupInstruction :: InstructionAddress -> Program -> Maybe Instruction
+        -- lookupInstruction _ [] = Nothing
+        -- lookupInstruction addr ((k, v):rest) =
+        --     ite (addr .== k) (Just v) (lookupInstruction addr rest)
+        lookupInstruction :: InstructionAddress -> Program -> Instruction
+        lookupInstruction _ [] = Jmpi 0
+        lookupInstruction addr ((k, v):rest) =
+            ite (addr .== k) v (lookupInstruction addr rest)
 
-readInstructionRegister :: Machine InstructionCode -- Instruction
+readInstructionRegister :: Machine Instruction
 readInstructionRegister = instructionRegister <$> get
 
-writeInstructionRegister :: InstructionCode -> Machine ()
+writeInstructionRegister :: Instruction -> Machine ()
 writeInstructionRegister instruction =
     modify $ \currentState ->
         currentState {instructionRegister = instruction}
@@ -172,7 +118,7 @@ jz :: SImm10 -> Machine ()
 jz simm = do
     zeroIsSet <- readFlag Zero
     ic <- instructionCounter <$> get
-    let ic' = ite zeroIsSet (ic + fromSImm10 simm) ic
+    let ic' = iteLazy zeroIsSet (ic + fromSImm10 simm) ic
     -- let ic' = ic
     modify $ \currentState ->
         currentState {instructionCounter = ic'}

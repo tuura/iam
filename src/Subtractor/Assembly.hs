@@ -34,13 +34,13 @@ jz simm = tell [Jz simm]
 halt :: Script
 halt = tell [Halt]
 
--- assemble :: Script -> Program
--- assemble s = zip [0..] prg
---   where
---     prg = snd $ runWriter s
-
 assemble :: Script -> Program
-assemble s = foldr (\(p, c) a -> writeArray a p c) a0 (zip [0..] $ map encode prg)
+assemble s = zip [0..] prg
   where
-    a0  = mkSFunArray (const 0)
     prg = snd $ runWriter s
+
+-- assemble :: Script -> Program
+-- assemble s = foldr (\(p, c) a -> writeArray a p c) a0 (zip [0..] $ map encode prg)
+--   where
+--     a0  = mkSFunArray (const 0)
+--     prg = snd $ runWriter s
