@@ -5,7 +5,7 @@ module Subtractor.Verification where
 import Control.Monad.State.Strict
 import Data.SBV
 import Subtractor.Types
-
+import Subtractor.State
 
 newtype Machine a = Machine { runMachine :: State MachineState a }
     deriving (Functor, Applicative, Monad, MonadState MachineState)
@@ -68,6 +68,13 @@ writeRegister register value = do
 --------------------------------------------------------------------------------
 ------------ Flags ---------------------------------------------------------
 --------------------------------------------------------------------------------
+
+-- | Lookup the value of a given 'Flag'. If the flag is not currently assigned
+-- any value, it is assumed to be 'False'.
+readFlag :: Flag -> Machine SBool
+readFlag flag = do
+    currentState <- get
+    return $ readArray (flags currentState) (flagId flag)
 
 -- | Set a given 'Flag' to the specified Boolean value.
 --   We assume that it takes 1 clock cycle to access
