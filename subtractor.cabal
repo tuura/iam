@@ -1,0 +1,28 @@
+name:                subtractor
+version:             0.1.0.0
+homepage:            https://github.com/tuura/subtractor#readme
+author:              Georgy Lukyanov, Andrey Mokhov
+maintainer:          lukyanov.georgy@gmail.com
+copyright:           2017 Georgy Lukyanov, Andrey Mokhov
+category:            Hardware
+build-type:          Simple
+extra-source-files:  README.md
+cabal-version:       >=1.10
+
+library
+  hs-source-dirs:      src
+  exposed-modules:     Subtractor
+  other-modules:       Subtractor.Assembly
+                     , Subtractor.Types
+                     , Subtractor.State
+                     , Subtractor.Semantics
+  build-depends:       base >= 4.7 && < 5
+                     , mtl
+                     , sbv
+                     , array
+                     , pretty-simple
+  default-language:    Haskell2010
+
+source-repository head
+  type:     git
+  location: https://github.com/tuura/subtractor
