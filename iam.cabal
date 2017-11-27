@@ -1,6 +1,7 @@
-name:                subtractor
+name:                iam
+synopsis:            I am an Inglorious Adding Machine
 version:             0.1.0.0
-homepage:            https://github.com/tuura/subtractor#readme
+homepage:            https://github.com/tuura/iam-1#readme
 author:              Georgy Lukyanov, Andrey Mokhov
 maintainer:          lukyanov.georgy@gmail.com
 copyright:           2017 Georgy Lukyanov, Andrey Mokhov
@@ -11,18 +12,17 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Subtractor
-  other-modules:       Subtractor.Assembly
-                     , Subtractor.Types
-                     , Subtractor.State
-                     , Subtractor.Semantics
+  exposed-modules:     Iam
+  other-modules:       Iam.Assembly
+                     , Iam.Types
+                     , Iam.State
+                     , Iam.Semantics
   build-depends:       base >= 4.7 && < 5
                      , mtl
                      , sbv
-                     , array
                      , pretty-simple
   default-language:    Haskell2010
 
 source-repository head
   type:     git
-  location: https://github.com/tuura/subtractor
+  location: https://github.com/tuura/iam

@@ -1,19 +1,25 @@
 {-# LANGUAGE DeriveFunctor #-}
 --------------------------------------------------------------------------------
 -- |
--- Module      :  Subtractor.Assembly
+-- Module      :  Iam.Assembly
 -- Copyright   :  (c) Georgy Lukyanov, Andrey Mokhov 2017
 --
 -- Maintainer  :  lukyanov.georgy@gmail.com
 -- Stability   :  experimental
 --
--- An embedded SUBTRACTOR assembly language.
+-- An embedded assembly language of Inglorious Adding Machine.
 --
 --------------------------------------------------------------------------------
-module Subtractor.Assembly where
+module Iam.Assembly where
 
 import Control.Monad (ap)
-import Subtractor.Types
+import Iam.Types
+
+ex :: Script
+ex = do
+    write (Jump 0)
+    Writer $ \p -> runWriter (write (Jump 1)) p
+    write (Jump 2)
 
 -- | An assembly writer monad.
 newtype Writer a = Writer {runWriter :: [Instruction] -> (a, [Instruction])}
@@ -29,8 +35,8 @@ instance Monad Writer where
     return a       = Writer (\p -> (a, p))
     Writer w >>= f = Writer (\p -> let (a, p') = w p in runWriter (f a) p')
 
-tell :: [Instruction] -> Script
-tell i = Writer (\p -> ((), i ++ p))
+write :: Instruction -> Script
+write i = Writer (\p -> ((), i:p))
 
 newtype Label = Label Int
 
@@ -45,37 +51,37 @@ goto (Label there) = do
 
 -- | Load a value from a memory location to a register
 load :: Register -> MemoryAddress -> Script
-load rX dmemaddr = tell [Load rX dmemaddr]
+load rX dmemaddr = write (Load rX dmemaddr)
 
 -- | Load a value from a memory location to a register,
 --   using the memory indirect access mode
 loadMI :: Register -> MemoryAddress -> Script
-loadMI rX dmemaddr = tell [LoadMI rX dmemaddr]
+loadMI rX dmemaddr = write (LoadMI rX dmemaddr)
 
 -- | Load an immediate value to a register
 set :: Register -> SImm8 -> Script
-set rX simm = tell [Set rX simm]
+set rX simm = write (Set rX simm)
 
 -- | Store a value from a register to a memory location
 store :: Register -> MemoryAddress -> Script
-store rX dmemaddr = tell [Store rX dmemaddr]
+store rX dmemaddr = write (Store rX dmemaddr)
 
--- | Subtract a value loaded from a memory location from one stored in
+-- | Add a value loaded from a memory location to one stored in
 --   a register
-subtract :: Register -> MemoryAddress -> Script
-subtract rX dmemaddr = tell [Subtract rX dmemaddr]
+add :: Register -> MemoryAddress -> Script
+add rX dmemaddr = write (Add rX dmemaddr)
 
 -- | Perform an unconditional jump
 jump :: SImm10 -> Script
-jump simm = tell [Jump simm]
+jump simm = write (Jump simm)
 
 -- | Perform a jump if 'Zero' flag is set
 jumpZero :: SImm10 -> Script
-jumpZero simm = tell [JumpZero simm]
+jumpZero simm = write (JumpZero simm)
 
 -- | Stop the machine operation
 halt :: Script
-halt = tell [Halt]
+halt = write (Halt)
 
 -- | Translate the script source code to a program --- a list of instructions
 ---  with assigned instruction addresses

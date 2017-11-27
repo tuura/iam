@@ -1,11 +1,11 @@
-module Subtractor where
+module Iam where
 
 import Text.Pretty.Simple (pPrint)
 import Data.SBV
-import Subtractor.Types
+import Iam.Types
 
-import Subtractor.State
-import Subtractor.Semantics
+import Iam.State
+import Iam.Semantics
 
 verify :: Int -> MachineState -> MachineState
 verify steps state

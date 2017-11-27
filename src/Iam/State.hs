@@ -2,24 +2,24 @@
 {-# LANGUAGE DeriveGeneric #-}
 --------------------------------------------------------------------------------
 -- |
--- Module      :  Subtractor.State
+-- Module      :  Iam.State
 -- Copyright   :  (c) Georgy Lukyanov, Andrey Mokhov 2017
 --
 -- Maintainer  :  lukyanov.georgy@gmail.com
 -- Stability   :  experimental
 --
--- The state of a SUBTRACTOR machine.
+-- The state of the Inglorious Adding Machine.
 --
 --------------------------------------------------------------------------------
-module Subtractor.State where
+module Iam.State where
 
 import Data.SBV (Mergeable, symbolicMerge)
 import Control.Monad.State.Strict
 import GHC.Generics (Generic)
-import Subtractor.Types
-import Subtractor.Assembly
+import Iam.Types
+import Iam.Assembly
 
--- | The state of a SUBTRACTOR machine
+-- | The state of a Iam machine
 data MachineState = MachineState
     { registers           :: RegisterBank
     , instructionCounter  :: InstructionAddress

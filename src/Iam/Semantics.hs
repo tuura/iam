@@ -1,7 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 --------------------------------------------------------------------------------
 -- |
--- Module      :  Subtractor.State
+-- Module      :  Iam.State
 -- Copyright   :  (c) Georgy Lukyanov, Andrey Mokhov 2017
 --
 -- Maintainer  :  lukyanov.georgy@gmail.com
@@ -12,14 +12,14 @@
 -- This module contains all heavy-lifting: reading/writing memory, flags and
 -- registers, controlling the clock and program execution.
 --------------------------------------------------------------------------------
-module Subtractor.Semantics where
+module Iam.Semantics where
 
 import Control.Monad.State.Strict
 import Data.SBV
-import Subtractor.Types
-import Subtractor.State
+import Iam.Types
+import Iam.State
 
--- | Subtractor machine is a state transformer
+-- | Iam machine is a state transformer
 newtype Machine a = Machine { runMachine :: State MachineState a }
     deriving (Functor, Applicative, Monad, MonadState MachineState)
 
@@ -114,10 +114,10 @@ execute (LoadMI   rX dmemaddr) =
     readMemory dmemaddr >>= toMemoryAddress >>= readMemory >>= writeRegister rX
 execute (Set      rX simm    ) = (writeRegister rX $ fromSImm8 simm)
 execute (Store    rX dmemaddr) = readRegister rX >>= writeMemory dmemaddr
-execute (Subtract rX dmemaddr) = do
+execute (Add      rX dmemaddr) = do
     x <- readRegister rX
     y <- readMemory dmemaddr
-    let z = x - y
+    let z = x + y
     writeFlag Zero (z .== 0)
     writeRegister rX z
 execute (Jump     simm          ) =
@@ -151,15 +151,9 @@ readProgram :: InstructionAddress -> Machine Instruction
 readProgram addr = do
     currentState <- get
     delay 1
-    -- pure $ lookupInstruction addr (program currentState)
     pure $ case lookup addr (program currentState) of
              Nothing -> Jump 0
              Just i  -> i
-    -- where
-        -- lookupInstruction :: InstructionAddress -> Program -> Instruction
-        -- lookupInstruction _ [] = Halt -- Jump 0
-        -- lookupInstruction addr ((k, v):rest) =
-        --     ite (addr .== k) v (lookupInstruction addr rest)
 
 readInstructionRegister :: Machine Instruction
 readInstructionRegister = instructionRegister <$> get
