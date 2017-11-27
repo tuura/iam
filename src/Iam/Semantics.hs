@@ -108,28 +108,53 @@ writeFlag flag value = do
 --------------------------------------------------------------------------------
 
 execute :: Instruction -> Machine ()
-execute (Halt                ) = writeFlag Halted true
-execute (Load     rX dmemaddr) = readMemory dmemaddr >>= writeRegister rX
-execute (LoadMI   rX dmemaddr) =
+execute (Halt                ) = executeHalt
+execute (Load     rX dmemaddr) = executeLoad     rX dmemaddr
+execute (LoadMI   rX dmemaddr) = executeLoadMI   rX dmemaddr
+execute (Set      rX simm    ) = executeSet      rX simm
+execute (Store    rX dmemaddr) = executeStore    rX dmemaddr
+execute (Add      rX dmemaddr) = executeAdd      rX dmemaddr
+execute (Jump     simm       ) = executeJump     simm
+execute (JumpZero simm       ) = executeJumpZero simm
+
+executeHalt :: Machine ()
+executeHalt = writeFlag Halted true
+
+executeLoad :: Register -> MemoryAddress -> Machine ()
+executeLoad rX dmemaddr = readMemory dmemaddr >>= writeRegister rX
+
+executeLoadMI :: Register -> MemoryAddress -> Machine ()
+executeLoadMI rX dmemaddr =
     readMemory dmemaddr >>= toMemoryAddress >>= readMemory >>= writeRegister rX
-execute (Set      rX simm    ) = (writeRegister rX $ fromSImm8 simm)
-execute (Store    rX dmemaddr) = readRegister rX >>= writeMemory dmemaddr
-execute (Add      rX dmemaddr) = do
+
+executeSet :: Register -> SImm8 -> Machine ()
+executeSet rX simm = (writeRegister rX $ fromSImm8 simm)
+
+executeStore :: Register -> MemoryAddress -> Machine ()
+executeStore rX dmemaddr = readRegister rX >>= writeMemory dmemaddr
+
+executeAdd :: Register -> MemoryAddress -> Machine ()
+executeAdd rX dmemaddr = do
     x <- readRegister rX
     y <- readMemory dmemaddr
     let z = x + y
     writeFlag Zero (z .== 0)
     writeRegister rX z
-execute (Jump     simm          ) =
+
+executeJump :: SImm10 -> Machine ()
+executeJump simm =
     modify $ \currentState ->
         currentState {instructionCounter =
             instructionCounter currentState + fromSImm10 simm}
-execute (JumpZero simm          ) = do
+
+executeJumpZero :: SImm10 -> Machine ()
+executeJumpZero simm = do
     zeroIsSet <- readFlag Zero
     ic <- instructionCounter <$> get
     let ic' = ite zeroIsSet (ic + fromSImm10 simm) ic
     modify $ \currentState ->
         currentState {instructionCounter = ic'}
+--------------------------------------------------------------------------------
 
 executeInstruction :: Machine ()
 executeInstruction = do

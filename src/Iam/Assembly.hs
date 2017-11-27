@@ -15,12 +15,6 @@ module Iam.Assembly where
 import Control.Monad (ap)
 import Iam.Types
 
-ex :: Script
-ex = do
-    write (Jump 0)
-    Writer $ \p -> runWriter (write (Jump 1)) p
-    write (Jump 2)
-
 -- | An assembly writer monad.
 newtype Writer a = Writer {runWriter :: [Instruction] -> (a, [Instruction])}
     deriving Functor

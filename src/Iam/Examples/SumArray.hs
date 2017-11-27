@@ -1,14 +1,14 @@
-module Subtractor.Examples.SumArray where
+module Iam.Examples.SumArray where
 
 import Prelude hiding (subtract)
 import Text.Pretty.Simple (pPrint)
 import Data.SBV hiding (label)
-import Subtractor
-import Subtractor.Types
-import Subtractor.State
-import Subtractor.Assembly
-import Subtractor.Semantics (readRegister)
-import Subtractor.Examples.Common
+import Iam
+import Iam.Types
+import Iam.State
+import Iam.Assembly
+import Iam.Semantics (readRegister)
+import Iam.Examples.Common
 
 --------------------------------------------------------------------------------
 sumArray :: Script
@@ -36,7 +36,7 @@ theoremSumArray n = proveWith prover $ do
         steps = 10000
         finalState = verify steps $ templateState sumArray memory
         result = readArray (registers finalState) 0
-    pure $ result .== sum summands
+    pure $ result .== sum summands &&& clock finalState .< 10000
 
 simulateSumArray :: IO ()
 simulateSumArray = do

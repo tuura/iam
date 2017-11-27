@@ -1,14 +1,14 @@
-module Subtractor.Examples.Swap where
+module Iam.Examples.Swap where
 
 import Prelude hiding (subtract)
 import Text.Pretty.Simple (pPrint)
 import Data.SBV hiding (label)
-import Subtractor
-import Subtractor.Types
-import Subtractor.State
-import Subtractor.Assembly
-import Subtractor.Semantics
-import Subtractor.Examples.Common
+import Iam
+import Iam.Types
+import Iam.State
+import Iam.Assembly
+import Iam.Semantics
+import Iam.Examples.Common
 
 swap :: Script
 swap = do

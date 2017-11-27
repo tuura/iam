@@ -1,9 +1,9 @@
-module Subtractor.Examples.Common where
+module Iam.Examples.Common where
 
 import Data.SBV
-import Subtractor.Types
-import Subtractor.State
-import Subtractor.Assembly
+import Iam.Types
+import Iam.State
+import Iam.Assembly
 
 r0, r1, r2, r3 :: Register
 [r0, r1, r2, r3] = [0..3]
