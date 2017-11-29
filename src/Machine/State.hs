@@ -2,7 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 --------------------------------------------------------------------------------
 -- |
--- Module      :  Iam.State
+-- Module      :  Machine.State
 -- Copyright   :  (c) Georgy Lukyanov, Andrey Mokhov 2017
 --
 -- Maintainer  :  lukyanov.georgy@gmail.com
@@ -11,13 +11,13 @@
 -- The state of the Inglorious Adding Machine.
 --
 --------------------------------------------------------------------------------
-module Iam.State where
+module Machine.State where
 
 import Data.SBV (Mergeable, symbolicMerge)
 import Control.Monad.State.Strict
 import GHC.Generics (Generic)
-import Iam.Types
-import Iam.Assembly
+import Machine.Types
+import Machine.Assembly
 
 -- | The state of a Iam machine
 data MachineState = MachineState

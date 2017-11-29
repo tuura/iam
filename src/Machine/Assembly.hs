@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveFunctor #-}
 --------------------------------------------------------------------------------
 -- |
--- Module      :  Iam.Assembly
+-- Module      :  Machine.Assembly
 -- Copyright   :  (c) Georgy Lukyanov, Andrey Mokhov 2017
 --
 -- Maintainer  :  lukyanov.georgy@gmail.com
@@ -10,10 +10,10 @@
 -- An embedded assembly language of Inglorious Adding Machine.
 --
 --------------------------------------------------------------------------------
-module Iam.Assembly where
+module Machine.Assembly where
 
 import Control.Monad (ap)
-import Iam.Types
+import Machine.Types
 
 -- | An assembly writer monad.
 newtype Writer a = Writer {runWriter :: [Instruction] -> (a, [Instruction])}

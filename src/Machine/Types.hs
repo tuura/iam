@@ -1,6 +1,6 @@
 --------------------------------------------------------------------------------
 -- |
--- Module      :  Iam.State
+-- Module      :  Machine.State
 -- Copyright   :  (c) Georgy Lukyanov, Andrey Mokhov 2017
 --
 -- Maintainer  :  lukyanov.georgy@gmail.com
@@ -9,7 +9,7 @@
 -- The domain types for the entities of the Inglorious adding machine.
 --
 --------------------------------------------------------------------------------
-module Iam.Types where
+module Machine.Types where
 
 import Data.SBV
 import GHC.Generics

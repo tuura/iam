@@ -1,7 +1,7 @@
 name:                iam
 synopsis:            I am an Inglorious Adding Machine
 version:             0.1.0.0
-homepage:            https://github.com/tuura/iam-1#readme
+homepage:            https://github.com/tuura/iam#readme
 author:              Georgy Lukyanov, Andrey Mokhov
 maintainer:          lukyanov.georgy@gmail.com
 copyright:           2017 Georgy Lukyanov, Andrey Mokhov
@@ -12,11 +12,11 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Iam
-  other-modules:       Iam.Assembly
-                     , Iam.Types
-                     , Iam.State
-                     , Iam.Semantics
+  exposed-modules:     Machine
+  other-modules:       Machine.Assembly
+                     , Machine.Types
+                     , Machine.State
+                     , Machine.Semantics
   build-depends:       base >= 4.7 && < 5
                      , mtl
                      , sbv

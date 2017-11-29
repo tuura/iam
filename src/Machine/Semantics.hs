@@ -1,7 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 --------------------------------------------------------------------------------
 -- |
--- Module      :  Iam.State
+-- Module      :  Machine.Semantics
 -- Copyright   :  (c) Georgy Lukyanov, Andrey Mokhov 2017
 --
 -- Maintainer  :  lukyanov.georgy@gmail.com
@@ -12,12 +12,12 @@
 -- This module contains all heavy-lifting: reading/writing memory, flags and
 -- registers, controlling the clock and program execution.
 --------------------------------------------------------------------------------
-module Iam.Semantics where
+module Machine.Semantics where
 
 import Control.Monad.State.Strict
 import Data.SBV
-import Iam.Types
-import Iam.State
+import Machine.Types
+import Machine.State
 
 -- | Iam machine is a state transformer
 newtype Machine a = Machine { runMachine :: State MachineState a }

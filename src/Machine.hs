@@ -1,11 +1,11 @@
-module Iam where
+module Machine where
 
 import Text.Pretty.Simple (pPrint)
 import Data.SBV
-import Iam.Types
+import Machine.Types
 
-import Iam.State
-import Iam.Semantics
+import Machine.State
+import Machine.Semantics
 
 verify :: Int -> MachineState -> MachineState
 verify steps state
