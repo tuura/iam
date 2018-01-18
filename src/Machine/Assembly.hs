@@ -43,6 +43,11 @@ goto (Label there) = do
     let offset = fromIntegral (there - here - 1)
     jump offset -- TODO: Add error handling if offset is too large
 
+-- | Arithmetic loop: execute 'body' n times and continue with 'later'.
+loop :: Int -> Script -> Script -> Script
+loop 0 later body = later
+loop n later body = body >> loop (n - 1) later body
+
 -- | Load a value from a memory location to a register
 load :: Register -> MemoryAddress -> Script
 load rX dmemaddr = write (Load rX dmemaddr)
