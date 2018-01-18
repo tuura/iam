@@ -1,9 +1,9 @@
-module Iam.Examples.Common where
+module Machine.Examples.Common where
 
 import Data.SBV
-import Iam.Types
-import Iam.State
-import Iam.Assembly
+import Machine.Types
+import Machine.State
+import Machine.Assembly
 
 r0, r1, r2, r3 :: Register
 [r0, r1, r2, r3] = [0..3]
