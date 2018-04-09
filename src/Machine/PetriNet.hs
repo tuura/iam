@@ -58,30 +58,37 @@ writeProgramGraph g dotfile =
 data Key = Reg  Register
          | Addr MemoryAddress
          | F    Flag
+         | IC
     deriving (Show, Eq, Ord)
 --------------------------------------------------------------------------------
 semantics :: Instruction -> Command
 semantics instr = case instr of
+    Halt -> Operation instr $ \read write -> pure ()
     (Load reg addr) -> Operation instr $ \read write -> do
-        v <- read (Addr addr)
+        read (Addr addr) >>= write (Reg reg)
+    (LoadMI reg addr) -> Operation instr $ \read write -> do
+        addr' <- read (Addr addr)
+        v <- read (Addr addr')
         write (Reg reg) v
+    (Set reg simm) -> Operation instr $ \read write -> do
+        write (Reg reg) simm
+    (Store reg addr) -> Operation instr $ \read write -> do
+        read (Reg reg) >>= write (Addr addr)
     (Add reg addr) -> Operation instr $ \read write -> do
         x <- read (Reg reg)
         y <- read (Addr addr)
+        let z = x + y
         write (Reg reg) (x + y)
-
-load :: Register -> MemoryAddress -> Command
-load reg addr = Operation (Load reg addr) $ \read write -> do
-    v <- read (Addr addr)
-    write (Reg reg) v
-
-add :: Register -> MemoryAddress -> Command
-add reg addr = Operation (Add reg addr) $ \read write -> do
-    x <- read (Reg reg)
-    y <- read (Addr addr)
-    write (Reg reg) (x + y)
-
-
+        if z == 0 then write (F Zero) 0 else write (F Zero) 42
+    (Jump simm) -> Operation instr $ \read write -> do
+        ic <- read IC
+        write IC (ic + simm)
+    (JumpZero simm) -> Operation instr $ \read write -> do
+        zero <- read (F Zero)
+        if (zero == 0) then do
+            ic <- read IC
+            write IC (ic + simm)
+        else pure ()
 --------------------------------------------------------------------------------
 ex1 :: [(InstructionAddress, Instruction)]
 ex1 = zip [0..]
@@ -90,6 +97,20 @@ ex1 = zip [0..]
     , Add  R0 1
 --   , Load R1 2
 --   , Add  R1 3
+    ]
+
+sumArray :: [(InstructionAddress, Instruction)]
+sumArray = zip [0..]
+    [ Load R0 0
+    , Load R2 254
+    , Store R2 255
+    , LoadMI R1 255
+    , Store R1 254
+    , Add R0 254
+    , Add R2 253
+    , JumpZero 1
+    , Jump (-7)
+    , Halt
     ]
 --------------------------------------------------------------------------------
 readState :: Key -> State MachineState Value
