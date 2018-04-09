@@ -30,12 +30,16 @@ dependencies (Operation instruction task) read write =
     trackingWrite k v = tell [Right k] >> lift (write k v)
     -- fetch k = tell [k] >> lift (store k)
 
-instructionGraph :: Instruction -> (Instruction -> ([Key], [Key])) -> Graph (Either Key Instruction)
-instructionGraph instr deps =
+instructionGraph :: (InstructionAddress, Instruction)
+                 -> (Instruction -> ([Key], [Key]))
+                 -> Graph (Either Key (InstructionAddress, Instruction))
+instructionGraph instrInfo@(_, instr) deps =
     let (ins, outs) = deps instr
-    in overlay (star (Right instr) (map Left outs)) (transpose $ star (Right instr) (map Left ins))
+    in overlay (star (Right instrInfo) (map Left outs))
+               (transpose $ star (Right instrInfo) (map Left ins))
 
-programGraph :: [Instruction] -> Graph (Either Key Instruction)
+programGraph :: [(InstructionAddress, Instruction)]
+             -> Graph (Either Key (InstructionAddress, Instruction))
 programGraph prog =
     simplify . overlays $
     map (\i -> instructionGraph i deps) prog
@@ -46,7 +50,8 @@ programGraph prog =
           mockRead = const . Identity $ 0
           mockWrite = const . const . Identity $ ()
 
-writeProgramGraph :: Graph (Either Key Instruction) -> FilePath -> IO ()
+writeProgramGraph :: Graph (Either Key (InstructionAddress, Instruction))
+                  -> FilePath -> IO ()
 writeProgramGraph g dotfile =
     writeFile dotfile ((exportAsIs (fmap show g)) :: String)
 
@@ -78,12 +83,14 @@ add reg addr = Operation (Add reg addr) $ \read write -> do
 
 
 --------------------------------------------------------------------------------
-ex1 :: [Instruction]
-ex1 = [ Load R0 0
-      , Add  R0 1
-    --   , Load R1 2
-    --   , Add  R1 3
-      ]
+ex1 :: [(InstructionAddress, Instruction)]
+ex1 = zip [0..]
+    [ Load R0 0
+    , Add  R0 1
+    , Add  R0 1
+--   , Load R1 2
+--   , Add  R1 3
+    ]
 --------------------------------------------------------------------------------
 readState :: Key -> State MachineState Value
 readState k = do
