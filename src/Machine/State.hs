@@ -1,5 +1,3 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Machine.State
@@ -13,9 +11,7 @@
 --------------------------------------------------------------------------------
 module Machine.State where
 
-import Data.SBV (Mergeable, symbolicMerge)
 import Control.Monad.State.Strict
-import GHC.Generics (Generic)
 import Machine.Types
 import Machine.Assembly
 
@@ -28,4 +24,4 @@ data MachineState = MachineState
     , memory              :: Memory
     , program             :: Program
     , clock               :: Clock
-    } deriving (Show, Generic, Mergeable)
+    } deriving Show

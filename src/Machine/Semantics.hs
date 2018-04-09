@@ -15,7 +15,6 @@
 module Machine.Semantics where
 
 import Control.Monad.State.Strict
-import Data.SBV
 import Machine.Types
 import Machine.State
 
