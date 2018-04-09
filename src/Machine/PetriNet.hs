@@ -12,6 +12,10 @@ import Algebra.Graph hiding (graph)
 import Algebra.Graph.Export.Dot
 import System.IO.Unsafe(unsafePerformIO)
 import Data.Functor.Identity
+import Data.Maybe
+import Data.String
+import Data.Set (Set)
+import qualified Data.Set as Set
 
 data Operation k v a = Operation Instruction
                         (forall m. Monad m => (k -> m v) -> (k -> v -> m ()) -> m a)
@@ -49,6 +53,19 @@ programGraph prog =
 
           mockRead = const . Identity $ 0
           mockWrite = const . const . Identity $ ()
+
+drawGraph :: Graph (Either Key (InstructionAddress, Instruction)) -> String
+drawGraph g = export style g
+  where
+    style = defaultStyleViaShow
+        { vertexName = \v -> "v" ++ show (fromJust $ Set.lookupIndex v names)
+        , vertexAttributes = \x -> case x of
+            Left  k      -> [ "shape"  := "circle"
+                            , "label"  := show k ]
+            Right (a, i) -> [ "shape" := "record"
+                            , "label" := instructionLabel a i ] }
+    names = vertexSet g
+    instructionLabel a i = fromString (show a <> "|" <> show i)
 
 writeProgramGraph :: Graph (Either Key (InstructionAddress, Instruction))
                   -> FilePath -> IO ()
