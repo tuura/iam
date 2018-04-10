@@ -1,4 +1,4 @@
-{-# LANGUAGE ConstraintKinds, RankNTypes, ScopedTypeVariables #-}
+{-# LANGUAGE ConstraintKinds, RankNTypes, ScopedTypeVariables, FlexibleContexts  #-}
 module Machine.PetriNet where
 
 import Prelude hiding (readIO, writeIO)
@@ -15,24 +15,36 @@ import Data.Functor.Identity
 import Data.Maybe
 import Data.String
 import Data.Set (Set)
+import Data.Proxy
 import qualified Data.Set as Set
 
-data Operation k v a = Operation Instruction
-                        (forall m. Monad m => (k -> m v) -> (k -> v -> m ()) -> m a)
+-- data Operation tag k v a =
+--     Operation tag (forall m. Monad m => (k -> m v) -> (k -> v -> m ()) -> m a)
 
-type Command = Operation Key Value ()
+data Operation tag k v a =
+    Operation { tag :: tag
+              , operation :: forall m. Monad m => (k -> m v) ->
+                                                  (k -> v -> m ()) ->
+                                                  m a
+              }
 
-dependencies :: forall k v m a. Monad m =>
-    Operation k v a -> (k -> m v) -> (k -> v -> m ()) -> m ([k], [k])
-dependencies (Operation instruction task) read write =
-    (partitionEithers <$> (execWriterT $ task trackingRead trackingWrite))
-  where
-    trackingRead :: k -> WriterT [Either k k] m v
-    trackingRead k = tell [Left k] >> lift (read k)
+type Command = Operation Instruction Key Value ()
 
-    trackingWrite :: k -> v -> WriterT [Either k k] m ()
-    trackingWrite k v = tell [Right k] >> lift (write k v)
-    -- fetch k = tell [k] >> lift (store k)
+simulate :: Operation Instruction k v a -> MachineState
+         -> (k -> State MachineState v)
+         -> (k -> v -> State MachineState ())
+         -> (a, MachineState)
+simulate (Operation instruction task) initState read write =
+    runState (task read write) initState
+
+type Dependency k = Either k k
+
+dependencies :: Operation Instruction k v a
+             -> (k -> Writer [Dependency k] v)
+             -> (k -> v -> Writer [Dependency k] ())
+             -> ([k], [k])
+dependencies (Operation instruction task) trackingRead trackingWrite =
+    partitionEithers . execWriter $ (task trackingRead trackingWrite)
 
 instructionGraph :: (InstructionAddress, Instruction)
                  -> (Instruction -> ([Key], [Key]))
@@ -48,11 +60,9 @@ programGraph prog =
     simplify . overlays $
     map (\i -> instructionGraph i deps) prog
     where deps :: Instruction -> ([Key], [Key])
-          deps i = runIdentity $
-            dependencies (semantics i) mockRead mockWrite
+          deps i = dependencies (semantics i) (trackingRead 0) trackingWrite
 
-          mockRead = const . Identity $ 0
-          mockWrite = const . const . Identity $ ()
+          mockRead = const 0
 
 drawGraph :: Graph (Either Key (InstructionAddress, Instruction)) -> String
 drawGraph g = export style g
@@ -70,7 +80,7 @@ drawGraph g = export style g
 writeProgramGraph :: Graph (Either Key (InstructionAddress, Instruction))
                   -> FilePath -> IO ()
 writeProgramGraph g dotfile =
-    writeFile dotfile ((exportAsIs (fmap show g)) :: String)
+    writeFile dotfile (drawGraph g)
 
 data Key = Reg  Register
          | Addr MemoryAddress
@@ -80,7 +90,7 @@ data Key = Reg  Register
 --------------------------------------------------------------------------------
 semantics :: Instruction -> Command
 semantics instr = case instr of
-    Halt -> Operation instr $ \read write -> pure ()
+    Halt -> Operation instr $ \read write -> write (F Halted) 1 >> pure ()
     (Load reg addr) -> Operation instr $ \read write -> do
         read (Addr addr) >>= write (Reg reg)
     (LoadMI reg addr) -> Operation instr $ \read write -> do
@@ -143,6 +153,15 @@ writeState k v = do
                            in put $ s {registers = rs'}
               Addr addr -> let mem' = Map.alter (const . Just $ v) addr (memory s)
                            in put $ s {memory = mem'}
+
+-- trackingRead :: v -> k -> Writer [Either k k] v
+-- trackingRead defaultValue k = tell [Left k] >> pure defaultValue
+
+trackingRead :: v -> k -> Writer [Either k k] v
+trackingRead defaultValue k = tell [Left k] >> pure defaultValue
+
+trackingWrite :: k -> v -> Writer [Either k k] ()
+trackingWrite k v = tell [Right k]
 
 readIO k = do putStr (show k ++ " = "); Prelude.read <$> getLine
 
