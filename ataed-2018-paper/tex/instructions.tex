@@ -1,0 +1,48 @@
+% The instruction set of IAM comprises 8 instructions. Consider the following
+% instruction mnemonics and informal descriptions of their behaviour:
+
+% \begin{longtable}{l|p{9cm}}
+% \texttt{load r memaddr}     & Load a value from a memory location to a register.\\
+% \texttt{loadmi r memaddr}   & Load a value from the memory location to the register using
+% an indirect memory access mode\footnote{Loading the value from a memory location and using it as
+% a memory address argument for the~\texttt{load} instruction.}.\\
+% \texttt{set      r byte   } & Load an 8-bit immediate argument to a register.\\
+% \texttt{store    r memaddr} & Store a value from a register to a memory location.\\
+% \texttt{add      r memaddr} & Add a value placed in a memory location to a value contained in a register.\\
+% \texttt{jump     byte     } & Perform an unconditional jump modifying the machine
+% instruction counter by a given offset.\\
+% \texttt{jumpz    byte     } & Performs a conditional jump if the zero flag is set.\\
+% \texttt{halt              } & Stop the execution setting the halt flag.
+% \end{longtable}
+
+Figure~\ref{fig:IAMtypes} presents and encoding of the IAM microarchitecture
+as a collection of Haskell types.
+
+\begin{figure}[t]
+\caption{Haskell data types encoding IAM microarchitecture.\label{fig:IAMtypes}}
+\begin{minted}{haskell}
+data MachineState = MachineState
+    { registers           :: RegisterBank
+    , instructionCounter  :: InstructionAddress
+    , instructionRegister :: Instruction
+    , flags               :: Flags
+    , memory              :: Memory
+    , program             :: Program
+    , clock               :: Clock
+    }
+
+type Value = Byte
+
+data Register = R0 | R1 | R2 | R3
+type RegisterBank = Map Register Value
+
+type MemoryAddress = Value
+type Memory = Map MemoryAddress Value
+
+data Flag = Zero
+          | Halted
+type Flags = Map Flag Bool
+
+type Clock = Value
+\end{minted}
+\end{figure}
