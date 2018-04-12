@@ -1,41 +1,32 @@
 module Machine.Examples.Common where
 
-import Data.SBV
+import qualified Data.Map as Map
 import Machine.Types
 import Machine.State
-import Machine.Assembly
-
-r0, r1, r2, r3 :: Register
-[r0, r1, r2, r3] = [0..3]
+import Machine.Instruction
 
 emptyRegisters :: RegisterBank
-emptyRegisters = mkSFunArray $ const 0
+emptyRegisters = Map.fromList [(R0, 0), (R1, 0), (R2, 0), (R3, 0)]
 
 emptyFlags :: Flags
-emptyFlags = mkSFunArray $ const false
+emptyFlags = Map.fromList [(Zero, 0), (Halted, 0)]
 
-initialiseMemory :: [(MemoryAddress, Value)] -> Memory
-initialiseMemory =
-    foldr (\(a, v) m -> writeArray m a v) (mkSFunArray $ const 0)
+templateState :: Memory -> MachineState
+templateState mem = MachineState { registers = emptyRegisters
+                                 , instructionCounter = 0
+                                 , instructionRegister = Jump 0
+                                 , program = []
+                                 , flags = emptyFlags
+                                 , memory = mem
+                                 , clock = 0
+                                 }
 
-dumpMemory :: Word8 -> Word8 -> Memory -> [SWord64]
-dumpMemory from to m = map (readArray m) [literal from..literal to]
-
-templateState :: Script -> Memory -> MachineState
-templateState src mem = MachineState { registers = emptyRegisters
-                               , instructionCounter = 0
-                               , instructionRegister = Jump 0
-                               , program = assemble src
-                               , flags = emptyFlags
-                               , memory = mem
-                               , clock = 0
-                               }
-
-prover = z3 { verbose = True
-            , redirectVerbose = Just "example.smt2"
-            , timing = PrintTiming
-            , printBase = 10
-            }
-
-steps :: Int
-steps = 100
+ex1 :: Program -- [(InstructionAddress, Instruction)]
+ex1 = zip [0..]
+    [ Load R0 0
+    , Add  R0 1
+    , JumpZero 1
+    , Add  R0 1
+--   , Load R1 2
+--   , Add  R1 3
+    ]

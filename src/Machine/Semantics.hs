@@ -1,196 +1,100 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
---------------------------------------------------------------------------------
--- |
--- Module      :  Machine.Semantics
--- Copyright   :  (c) Georgy Lukyanov, Andrey Mokhov 2017
---
--- Maintainer  :  lukyanov.georgy@gmail.com
--- Stability   :  experimental
---
--- The simulation/verification framework.
---
--- This module contains all heavy-lifting: reading/writing memory, flags and
--- registers, controlling the clock and program execution.
---------------------------------------------------------------------------------
+{-# LANGUAGE ConstraintKinds, RankNTypes,
+             ScopedTypeVariables,
+             FlexibleContexts,
+             FlexibleInstances #-}
+
 module Machine.Semantics where
 
-import Control.Monad.State.Strict
+import Metalanguage
 import Machine.Types
-import Machine.State
+import Machine.Instruction
 
--- | Iam machine is a state transformer
-newtype Machine a = Machine { runMachine :: State MachineState a }
-    deriving (Functor, Applicative, Monad, MonadState MachineState)
+-- | 'MachineKey' will instantiate the 'k' type variable in the 'Semantics'
+--   metalanguage.
+data MachineKey = Reg  Register
+         | Addr MemoryAddress
+         | F    Flag
+         | IC
+         | IR
+         | Prog InstructionAddress
+    deriving (Show, Eq, Ord)
 
-run :: Machine a -> MachineState -> (a, MachineState)
-run = runState . runMachine
+-- | Applicative semantics is data independent. May be used for
+--   static code analysis.
+--
+--   Note: applicative semantics cannot interact with flags.
+semanticsA :: Instruction -> Semantics Applicative MachineKey Value ()
+semanticsA Halt              = halt
+semanticsA (Load reg addr)   = load reg addr
+semanticsA (LoadMI _ _)      = const (const Nothing)
+semanticsA (Set reg simm)    = set reg simm
+semanticsA (Store reg addr)  = store reg addr
+semanticsA (Add reg addr)    = add reg addr
+semanticsA (Jump simm)       = jump simm
+semanticsA (JumpZero _)      = const (const Nothing)
 
---------------------------------------------------------------------------------
------------- Clock -------------------------------------------------------------
---------------------------------------------------------------------------------
+-- | Monadic semantics may involve data dynamic analysis and must be executed
+--   on a concrete machine state.
+--
+--   Note: Indirect memory access ('LoadMI') and conditional jump ('JumpZero')
+--   instruction may be only assigned monadic semantics.
+semanticsM :: Instruction -> Semantics Monad MachineKey Value ()
+semanticsM (LoadMI reg addr) = loadMI reg addr
+semanticsM (JumpZero simm)   = jumpZero simm
+semanticsM i                 = semanticsA i
 
--- | Advance the clock by a given number of clock cycles.
-delay :: Clock -> Machine ()
-delay cycles =
-    modify $ \currentState -> currentState {clock = clock currentState + cycles}
+-- | Halt the execution.
+--   Applicative.
+halt :: Semantics Applicative MachineKey Value ()
+halt read write = Just $
+    write (F Halted) (pure 1)
 
---------------------------------------------------------------------------------
------------- Memory ------------------------------------------------------------
---------------------------------------------------------------------------------
+-- | Load a value from a memory location to a register.
+--   Applicative.
+load :: Register -> MemoryAddress -> Semantics Applicative MachineKey Value ()
+load reg addr read write = Just $
+    write (F Halted) (pure 1)
 
--- | Write a new 'Value' to the given 'MemoryAddress'. We assume that it takes 2
--- clock cycles to access the memory in hardware.
-writeMemory :: MemoryAddress -> Value -> Machine ()
-writeMemory address value = do
-    delay 2
-    modify $ \currentState ->
-        currentState {memory = writeArray (memory currentState) address value}
+-- | Set a register value.
+--   Applicative.
+set :: Register -> SImm8 -> Semantics Applicative MachineKey Value ()
+set reg simm _ write = Just $
+    write (Reg reg) (pure simm)
 
--- | Lookup the 'Value' at the given 'MemoryAddress'. If the value has never
--- been initialised, this function returns 0. We assume that it
--- takes 2 clock cycles to access the memory in hardware.
-readMemory :: MemoryAddress -> Machine Value
-readMemory address = do
-    currentState <- get
-    delay 2
-    return $ readArray (memory currentState) address
+-- | Store a value from a register to a memory location.
+--   Applicative.
+store :: Register -> MemoryAddress -> Semantics Applicative MachineKey Value ()
+store reg addr read write = Just $
+    write (Addr addr) (read (Reg reg) )
 
-toMemoryAddress :: Value -> Machine SWord8
-toMemoryAddress value = do
-    let valid = value .< 256
-    return $ fromBitsLE (take 8 $ blastLE value)
+-- | Add a value from memory location to one in a register.
+--   Applicative.
+add :: Register -> MemoryAddress -> Semantics Applicative MachineKey Value ()
+add reg addr read write = Just $
+    let z = (+) <$> read (Reg reg) <*> read (Addr addr)
+    in write (Reg reg) z *> write (F Zero) (boolToValue <$> (== 0) <$> z)
+        where boolToValue False = 0
+              boolToValue True  = 1
 
---------------------------------------------------------------------------------
------------- Registers ---------------------------------------------------------
---------------------------------------------------------------------------------
+-- | Unconditional jump.
+--   Applicative.
+jump :: SImm8 -> Semantics Applicative MachineKey Value ()
+jump simm read write = Just $
+    write IC ((+) <$> read IC <*> pure simm)
 
--- | Lookup the 'Value' in a given 'Register'. If the register has never been
--- initialised, this function returns 0. We assume that it
--- takes 1 clock cycles to access a register in hardware.
-readRegister :: Register -> Machine Value
-readRegister register = do
-    s <- get
-    delay 1
-    return $ readArray (registers s) register
+-- | Indirect memory access.
+--   Monadic.
+loadMI :: Register -> MemoryAddress -> Semantics Monad MachineKey Value ()
+loadMI reg addr read write = Just $ do
+    addr' <- read (Addr addr)
+    v <- read (Addr addr')
+    write (Reg reg) (pure v)
 
--- | Write a new 'Value' to a given 'Register'.
---   We assume that it takes 1 clock cycle to access a register in hardware.
-writeRegister :: Register -> Value -> Machine ()
-writeRegister register value = do
-    delay 1
-    modify $ \currentState ->
-        currentState {registers = writeArray (registers currentState) register value}
-
---------------------------------------------------------------------------------
------------- Flags ---------------------------------------------------------
---------------------------------------------------------------------------------
-
--- | Lookup the value of a given 'Flag'. If the flag is not currently assigned
--- any value, it is assumed to be 'False'.
-readFlag :: Flag -> Machine SBool
-readFlag flag = do
-    currentState <- get
-    pure $ readArray (flags currentState) (flagId flag)
-
--- | Set a given 'Flag' to the specified Boolean value.
---   We assume that it takes 1 clock cycle to access
---   the flag register in hardware.
-writeFlag :: Flag -> SBool -> Machine ()
-writeFlag flag value = do
-    delay 1
-    modify $ \currentState ->
-        currentState {
-            flags = writeArray (flags currentState) (flagId flag) value}
-
---------------------------------------------------------------------------------
------------- Program -----------------------------------------------------------
---------------------------------------------------------------------------------
-
-execute :: Instruction -> Machine ()
-execute (Halt                ) = executeHalt
-execute (Load     rX dmemaddr) = executeLoad     rX dmemaddr
-execute (LoadMI   rX dmemaddr) = executeLoadMI   rX dmemaddr
-execute (Set      rX simm    ) = executeSet      rX simm
-execute (Store    rX dmemaddr) = executeStore    rX dmemaddr
-execute (Add      rX dmemaddr) = executeAdd      rX dmemaddr
-execute (Jump     simm       ) = executeJump     simm
-execute (JumpZero simm       ) = executeJumpZero simm
-
-executeHalt :: Machine ()
-executeHalt = writeFlag Halted true
-
-executeLoad :: Register -> MemoryAddress -> Machine ()
-executeLoad rX dmemaddr = readMemory dmemaddr >>= writeRegister rX
-
-executeLoadMI :: Register -> MemoryAddress -> Machine ()
-executeLoadMI rX dmemaddr =
-    readMemory dmemaddr >>= toMemoryAddress >>= readMemory >>= writeRegister rX
-
-executeSet :: Register -> SImm8 -> Machine ()
-executeSet rX simm = (writeRegister rX $ fromSImm8 simm)
-
-executeStore :: Register -> MemoryAddress -> Machine ()
-executeStore rX dmemaddr = readRegister rX >>= writeMemory dmemaddr
-
-executeAdd :: Register -> MemoryAddress -> Machine ()
-executeAdd rX dmemaddr = do
-    x <- readRegister rX
-    y <- readMemory dmemaddr
-    let z = x + y
-    writeFlag Zero (z .== 0)
-    writeRegister rX z
-
-executeJump :: SImm10 -> Machine ()
-executeJump simm =
-    modify $ \currentState ->
-        currentState {instructionCounter =
-            instructionCounter currentState + fromSImm10 simm}
-
-executeJumpZero :: SImm10 -> Machine ()
-executeJumpZero simm = do
-    zeroIsSet <- readFlag Zero
-    ic <- instructionCounter <$> get
-    let ic' = ite zeroIsSet (ic + fromSImm10 simm) ic
-    modify $ \currentState ->
-        currentState {instructionCounter = ic'}
---------------------------------------------------------------------------------
-
-executeInstruction :: Machine ()
-executeInstruction = do
-    fetchInstruction
-    incrementInstructionCounter
-    execute =<< readInstructionRegister
-
--- | Increment the instruction counter.
-incrementInstructionCounter :: Machine ()
-incrementInstructionCounter =
-    modify $ \currentState ->
-        currentState {instructionCounter = instructionCounter currentState + 1}
-
-fetchInstruction :: Machine ()
-fetchInstruction =
-    get >>= readProgram . instructionCounter >>= writeInstructionRegister
-
-readProgram :: InstructionAddress -> Machine Instruction
-readProgram addr = do
-    currentState <- get
-    delay 1
-    pure $ case lookup addr (program currentState) of
-             Nothing -> Jump 0
-             Just i  -> i
-
-readInstructionRegister :: Machine Instruction
-readInstructionRegister = instructionRegister <$> get
-
-writeInstructionRegister :: Instruction -> Machine ()
-writeInstructionRegister instruction =
-    modify $ \currentState ->
-        currentState {instructionRegister = instruction}
-
---------------------------------------------------------------------------------
-
-fromSImm8 :: SImm8 -> Value
-fromSImm8 s = fromBitsLE $ blastLE s ++ replicate 56 (sTestBit s 7)
-
-fromSImm10 :: SImm10 -> InstructionAddress
-fromSImm10 s = fromBitsLE $ (take 10 $ blastLE s) ++ replicate 6 (sTestBit s 9)
+-- | Jump if 'Zero' flag is set.
+--   Monadic.
+jumpZero :: SImm8 -> Semantics Monad MachineKey Value ()
+jumpZero simm read write = Just $ do
+    zero <- read (F Zero)
+    if (zero == 1) then
+        write IC ((+) <$> read IC <*> pure simm)
+    else pure ()

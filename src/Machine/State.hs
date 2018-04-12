@@ -13,7 +13,7 @@ module Machine.State where
 
 import Control.Monad.State.Strict
 import Machine.Types
-import Machine.Assembly
+import Machine.Instruction
 
 -- | The state of a Iam machine
 data MachineState = MachineState

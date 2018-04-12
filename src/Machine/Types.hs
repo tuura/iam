@@ -17,14 +17,14 @@ import Control.Monad.State.Strict
 
 -- | The 'Value' datatype represents data values. The precise
 -- bit-width is left unspecified, but it is assumed that it fits into 64 bits.
-type Value = Int64
+type Value = Int
 
 type SImm8 = Value
 
 type SImm10 = Value
 
 data Register = R0 | R1 | R2 | R3
-    deriving (Show, Eq, Ord)
+    deriving (Show, Eq, Ord, Enum)
 
 -- | The register bank is represented by a map from registers to their values.
 type RegisterBank = Map.Map Register Value
@@ -45,26 +45,8 @@ flagId :: Flag -> FlagId
 flagId = fromIntegral . fromEnum
 
 -- | The state of flags is represented by a map from flags to their values.
-type Flags = Map.Map FlagId Bool
+type Flags = Map.Map Flag Value
 
 -- | 'Clock' is the current time measured in clock cycles. It used to model the
 -- effect of the 'Iam.Semantics.wait' instruction.
 type Clock = Value
-
--- | Iam instructions
-data Instruction = Halt
-                 | Load     Register MemoryAddress
-                 | LoadMI   Register MemoryAddress
-                 | Set      Register SImm8
-                 | Store    Register MemoryAddress
-                 | Add      Register MemoryAddress
-                 | Jump     SImm10
-                 | JumpZero SImm10
-    deriving (Show, Eq, Ord)
-
--- | Programs are stored in program memory.
-type InstructionAddress = Value
-
--- | The program is represented by a map from instruction addresses to
---   instructions.
-type Program = [(InstructionAddress, Instruction)]
