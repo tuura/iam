@@ -32,7 +32,10 @@ dependencies task =
   where trackingRead  k    = Const [Left k]
         trackingWrite k fv = fv *> Const [Right k]
 
-data AreDataDependent = Yes | No
+data OracleAnswer k = Concurrent
+                    | ReadConflict [k]
+                    | WriteConflict [k]
+                    | ReadWriteConflict [k] [k]
     deriving (Show, Eq)
 
 -- | Find out if two computations are data dependent by matching their
@@ -40,13 +43,17 @@ data AreDataDependent = Yes | No
 concurrencyOracle :: Eq k =>
                     Semantics Applicative k v1 a
                  -> Semantics Applicative k v2 a
-                 -> Maybe AreDataDependent
+                 -> Maybe (OracleAnswer k)
 concurrencyOracle p q = do
     (pIns, pOuts) <- dependencies p
     (qIns, qOuts) <- dependencies q
-    case (intersect pIns qIns, intersect pOuts qOuts) of
-        ([], []) -> pure Yes
-        _        -> pure No
+    let readConflicts  = intersect pIns qIns
+        writeConflicts = intersect pOuts qOuts
+    pure $ case (readConflicts, writeConflicts ) of
+                ([], []) -> Concurrent
+                (rs, []) -> ReadConflict rs
+                ([], ws) -> WriteConflict ws
+                (rs, ws) -> ReadWriteConflict rs ws
 
 -- | Compute static data flow graph of an instruction. In case of supplying a
 --   monadic, i.e. data-dependent instruction, 'Nothing' is returned.
