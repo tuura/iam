@@ -14,6 +14,7 @@ import Algebra.Graph.Export.Dot
 import qualified Data.Set as Set
 import Data.Maybe (fromJust)
 import Data.String (fromString)
+import Data.Functor.Const
 
 import Metalanguage
 import Machine.Semantics
@@ -25,31 +26,28 @@ import Machine.Instruction
 --   'Applicative' constraint. In case of presence of non-static dependecies
 --   'Nothing' is returned.
 dependencies :: Semantics Applicative k v a
-             -> (k -> v)
              -> Maybe ([k], [k])
-dependencies task read =
-    partitionEithers . execWriter <$>
+dependencies task =
+    partitionEithers . getConst <$>
     task trackingRead trackingWrite
-  where trackingRead k = tell [Left k] *> pure (read k)
-        trackingWrite k v = tell [Right k]
+  where trackingRead  k    = Const [Left k]
+        trackingWrite k fv = fv *> Const [Right k]
 
 data AreDataDependent = Yes | No
     deriving (Show, Eq)
 
 -- | Find out if two computations are data dependent by matching their
 --   static dependencies
-concurrentOracle :: Eq k =>
+concurrencyOracle :: Eq k =>
                     Semantics Applicative k v1 a
                  -> Semantics Applicative k v2 a
-                 -> (k -> v1)
-                 -> (k -> v2)
                  -> Maybe AreDataDependent
-concurrentOracle p q pRead qRead = do
-    (pIns, pOuts) <- dependencies p pRead
-    (qIns, qOuts) <- dependencies q qRead
+concurrencyOracle p q = do
+    (pIns, pOuts) <- dependencies p
+    (qIns, qOuts) <- dependencies q
     case (intersect pIns qIns, intersect pOuts qOuts) of
-        ([], []) -> pure No
-        _        -> pure Yes
+        ([], []) -> pure Yes
+        _        -> pure No
 
 -- | Compute static data flow graph of an instruction. In case of supplying a
 --   monadic, i.e. data-dependent instruction, 'Nothing' is returned.
@@ -59,10 +57,9 @@ concurrentOracle p q pRead qRead = do
 instructionGraph :: (InstructionAddress, Instruction)
                     -> Maybe (Graph (Either MachineKey (InstructionAddress, Instruction)))
 instructionGraph instrInfo@(_, instr) = do
-    (ins, outs) <- dependencies (semanticsA instr) mockRead
+    (ins, outs) <- dependencies (semanticsA instr)
     pure $ overlay (star (Right instrInfo) (map Left outs))
                    (transpose $ star (Right instrInfo) (map Left ins))
-    where mockRead = const 0
 
 -- | Compute static data flow graph of a program. In case of supplying a
 --   monadic, i.e. data-dependent instruction, 'Nothing' is returned.
