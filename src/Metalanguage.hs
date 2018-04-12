@@ -3,8 +3,6 @@
 
 module Metalanguage where
 
-import Data.Proxy
-
 -- | The 'Semantics' data type is a polymorphic monadic metalanguage for describing
 --   the semantics of programming languages.
 --

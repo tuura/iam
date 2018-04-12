@@ -18,7 +18,6 @@ import Data.Functor.Const
 
 import Metalanguage
 import Machine.Semantics
-import Machine.Types
 import Machine.Instruction
 
 -- | Calculate data dependencies of a semantic computation
@@ -66,8 +65,8 @@ instructionGraph instrInfo@(_, instr) = do
 programDataGraph :: Program
                  -> Maybe (Graph (Either MachineKey (InstructionAddress, Instruction)))
 programDataGraph p = foldl go (Just empty) (map instructionGraph p)
-    where go acc Nothing  = Nothing
-          go acc g = overlay <$> acc <*> g
+    where go _   Nothing  = Nothing
+          go acc g        = overlay <$> acc <*> g
 
 --------------------------------------------------------------------------------
 -- | Serialise data flow graph as a .dot string

@@ -4,15 +4,12 @@
              FlexibleInstances #-}
 module Machine.Semantics.Simulate where
 
-import Prelude hiding (readIO, writeIO)
+import Prelude hiding (readIO)
 import Control.Monad.State
-import Control.Monad.Writer
 import Machine.Types
-import Data.Either (partitionEithers)
 import qualified Data.Map as Map
 import Metalanguage
 import Machine.State
-import Machine.Instruction
 import Machine.Semantics
 
 -- | Execute the semantics in a stateful context to get the result and the
@@ -22,8 +19,8 @@ simulate :: Semantics Monad k v a
          -> (k -> State s v)
          -> (k -> State s v -> State s ())
          -> Maybe (a, s)
-simulate task s0 readState writeState =
-    (flip runState) s0 <$> (task readState writeState)
+simulate task s0 read write =
+    (flip runState) s0 <$> (task read write)
 -- Example:
 -- simulate (mconcat $ map semantics $ map snd ex1) defaultState readState writeState
 

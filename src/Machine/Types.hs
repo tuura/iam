@@ -11,9 +11,7 @@
 --------------------------------------------------------------------------------
 module Machine.Types where
 
-import Data.Int
 import qualified Data.Map.Strict as Map
-import Control.Monad.State.Strict
 
 -- | The 'Value' datatype represents data values. The precise
 -- bit-width is left unspecified, but it is assumed that it fits into 64 bits.

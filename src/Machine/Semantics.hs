@@ -5,6 +5,7 @@
 
 module Machine.Semantics where
 
+import Prelude hiding (read)
 import Metalanguage
 import Machine.Types
 import Machine.Instruction
@@ -46,14 +47,14 @@ semanticsM i                 = semanticsA i
 -- | Halt the execution.
 --   Applicative.
 halt :: Semantics Applicative MachineKey Value ()
-halt read write = Just $
+halt _ write = Just $
     write (F Halted) (pure 1)
 
 -- | Load a value from a memory location to a register.
 --   Applicative.
 load :: Register -> MemoryAddress -> Semantics Applicative MachineKey Value ()
 load reg addr read write = Just $
-    write (F Halted) (pure 1)
+    write (Reg reg) (read (Addr addr))
 
 -- | Set a register value.
 --   Applicative.
