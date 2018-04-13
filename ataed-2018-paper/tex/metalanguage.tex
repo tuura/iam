@@ -1,49 +1,123 @@
-This section present a framework for describing the semantics of programming languages
-in terms of a~\emph{polymorphic computational metalanguage}. We call the metalanguage
-polymorphic because, once semantics is encoded in the metalanguage,
-it may be evaluated in different contexts yielding meanings of a computation
-flavoured by the context.
 
-\begin{definition}
-\label{def:metalanguage}
-\textbf{Polymorphic computational metalanguage}\\
-A polymorphic computational metalanguage is a type constructor $F$ equipped with
-two effectful functions: $\forall k \forall v.r: k \rightarrow F v$ and
-$\forall k \forall v.w: k \rightarrow F v \rightarrow F~\top$.
-\end{definition}
+In the previous section we have described the semantics of several instructions of
+a generic computer architecture in terms of a polymorphic computational metalanguage.
+This section presents the formal definition of the metalanguage and provides a more
+formal description of the instruction and program semantics.
 
-We embed the metalanguage in Haskell using the following type:
+\textbf{A remark on formal definitions}
+Before we start let us make a remark on what we consider a formal definition here.
+We do not aim to formalise our tools in any kind of foundational mathematical system,
+such as ZF~\footnote{Zermelo-Fraenkel set theory} or homotopy type theory. We are
+presenting an elegant way of solving a well-known problem and we use the Haskell
+programming language to implement our solutions. Therefore, we consider a concept
+to be~\emph{formally} defined if it is expressed as a Haskell data type. This may
+sound as hand-waving, but since Haskell has a static type system (a variant of System F)
+and operational semantics, we can stay formal enough. Hence this section will intensively
+use Haskell notation. Some definitions will use Haskell list and functions composition
+notation outside of listings.
+
+\textbf{Definition (polymorphic computational metalanguage):}
+
+We defined the metalanguage as the following Haskell type:
 
 \begin{minted}{haskell}
-type Semantics c k v a = forall f. c f => (k -> f v)
-                                       -> (k -> f v -> f ())
-                                       -> Maybe (f a)
+type Semantics c a =
+    forall f. c f => (MachineKey -> f Word64)
+                  -> (MachineKey -> f Word64 -> f ())
+                  -> Maybe (f a)
 \end{minted}
 
 A~\hs{Semantics} is essentially a rank-2 polymorphic\footnote{A rank-2 polymorphic
 function is one taking as a parameter another function, which is in turn (rank-1)
 polymorphic. This feature requires~\hs{RankNTypes} GHC extension to be enabled.}
-effectful computation depending on two polymorphic functions,
+effectful computation depending on two functions,
 which we will usually referred to as~\hs{read} and~\hs{write}.
 
 Let us now give some intuition for the components of the metalanguage.
-The~\hs{Semantics c k v a}
-type may be thought as a mutable dictionary. The types~\hs{k} and~\hs{v} represent keys
-and associated values. The~\hs{read} function has type~\hs{k -> f v} --- it takes
+The~\hs{Semantics c a}
+type may be thought as a mutable dictionary. The~\hs{read} function has
+type~\hs{MachineKey -> f Word64} --- it takes
 a key and gives back an effectful value looked up in the dictionary. The~\hs{write}
-function takes a key and an effectful value to and alters the value of the key
-with the value. The semantics is allowed to fail to produce a result, hence the
+function takes a key and an effectful value and alters the value of the key.
+The semantics is allowed to fail to produce a result, hence the
 the return type~hs{f a} is wrapped in the~\hs{Maybe} type constructor.~\hs{Maybe}
 \footnote{This type is defined in the Haskell base library as~\hs{data Maybe a = Just a | Nothing}}
-is an idiomatic Haskell encoding of potentially faulty computations.
+is an idiomatic Haskell encoding of potentially faulty computations. We give the
+semantics a possibility of failure in order to avoid partial functions. The semantics
+may become partial if we fix the constraint type variable~\hs{c} to~\hs{Applicative},
+thus losing possibility to encode the monadic components of the instruction set.
+~\hs{Maybe} gives us a possibility to provide mock the encoding of monadic instructions
+and make the semantics total.
 
-In this paper we use the defined metalanguage to encode the semantics of the
-instruction set architecture of a simple computer. We call this computer
-IAM~\footnote{Inglorious Haskell Machine}. The next section gives an overview of
-its microarchitecture and instruction set, present the semantics of instructions
-and programs in terms of the polymorphic computational metalanguage and two
-instantiations of the semantics: stateful simulator and concurrent data access
-analyser.
+\textbf{Definition (instruction set):} An~\emph{instruction set} is an algebraic data type
+comprising as much data constructors as there are instructions.
+If an instruction has an argument, it is defined as an argument of a corresponding data constructor.
+
+Consider an example definition of an instruction set consisting
+of instructions described in the previous sections and the related auxiliary types:
+
+\begin{minted}{haskell}
+data Instruction = Load     Register MemoryAddress
+                 | LoadMI   Register MemoryAddress
+                 | Add      Register MemoryAddress
+                 | Jump     Word64
+
+data Register = R0 | R1 | R2 | R3
+
+type MemoryAddress = Word64
+\end{minted}
+
+\textbf{Definition (instruction set semantics):}
+
+The semantics of an instruction set is a Haskell function mapping
+data constructors of the instruction sets to the terms of the polymorphic
+computational metalanguage.
+
+The definition of the instruction set semantics is the point where the metalanguage
+has to be made monomorphic, i.e. the context constraint has to be instantiated with
+a concrete one. Now we will consequently present unrestricted, functorial,
+applicative and monadic semantics for the defined instruction set:
+
+We start from the~\hs{load} instruction which may be executed in any
+context\todo{Define it explicitly?}~\footnote{The~\hs{Unrestricted} constraint is not exactly idiomatic Haskell and
+requires some tricks to be defined.}:
+
+\begin{minted}{haskell}
+semanticsU :: Instruction -> Semantics Unrestricted ()
+semanticsU (Load reg addr)   = load reg addr
+semanticsU _                 = const (const Nothing)
+\end{minted}
+
+Note how the Haskell wildcard pattern to rule out instructions that require a more
+restrictive context. The~\hs{const (const Nothing)} expression is equivalent
+to~\hs{\_ -> \_ -> Nothing} and constructs a stub for these more restricted
+semantics.
+
+The instantiation of~\hs{c} with a~\hs{Functor} permits to implement the semantics
+of~\hs{jump}:
+
+\begin{minted}{haskell}
+semanticsF :: Instruction -> Semantics Functor ()
+semanticsF i@(Load _ _)      = semanticU i
+semanticsF (Jump simm)       = jump simm
+semanticsF _                 = const (const Nothing)
+\end{minted}
+
+Here we reuse the unrestricted semantics for the~\hs{load} instruction.
+
+The rest of the semantic definitions are straitforward:
+
+\begin{minted}{haskell}
+semanticsA :: Instruction -> Semantics Applicative ()
+semanticsA i@(Load _ _)      = semanticU i
+semanticsA i@(Jump simm)     = semanticA i
+semanticsA (Add reg addr)    = add reg addr
+semanticsA _                 = const (const Nothing)
+
+semanticsM :: Instruction -> Semantics Monad ()
+semanticsM (LoadMI reg addr) = loadMI reg addr
+semanticsM i                 = semanticsA i
+\end{minted}
 
 
 
