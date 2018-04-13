@@ -4,14 +4,19 @@
 %
 \documentclass[runningheads]{llncs}
 \bibliographystyle{splncs04}
-\setcounter{tocdepth}{3}
+\setcounter{tocdepth}{2}
+\makeatletter
+\renewcommand*\l@author[2]{}
+\renewcommand*\l@title[2]{}
+\makeatletter
+\usepackage[bookmarks]{hyperref}
 %
 \usepackage{graphicx}
 \usepackage{minted}
 \usepackage{longtable}
 % If you use the hyperref package, please uncomment the following line
 % to display URLs in blue roman font according to Springer's eBook style:
-% \renewcommand\UrlFont{\color{blue}\rmfamily}
+\renewcommand\UrlFont{\color{blue}\rmfamily}
 \newcommand{\hs}{\mintinline{haskell}}
 \usepackage{todonotes}
 
@@ -46,22 +51,18 @@ The abstract should briefly summarize the contents of the paper in
 
 \keywords{First keyword  \and Second keyword \and Another keyword.}
 \end{abstract}
-%
-%
-%
 \tableofcontents
+
 \section{Introduction and motivation}
 
-\section{The IAM architecture and its formal model\label{sec:IAM}}
+\section{Polymorphic computational metalanguage\label{sec:iam}}
+\input{tex/metalanguage.tex}
+
+\section{Case study\label{sec:iam}}
 \input{tex/iam.tex}
 
-\section{Instruction semantics\label{sec:semantics}}
-\input{tex/semantics.tex}
-
-\section{Deriving concurrency oracles for applicative instructions}
-\input{tex/oracles.tex}
-
-\section{Case study}
+% \section{Deriving concurrency oracles for applicative instructions}
+% \input{tex/oracles.tex}
 
 \section{Conclusion}
 %
