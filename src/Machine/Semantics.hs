@@ -20,15 +20,30 @@ data MachineKey = Reg  Register
          | Prog InstructionAddress
     deriving (Show, Eq, Ord)
 
+-- | Functorial semantics is data independent and may have a most one
+--   static dependency. May be used for
+--   static code analysis.
+--
+--   Note: applicative semantics cannot interact with flags.
+semanticsF :: Instruction -> Semantics Applicative MachineKey Value ()
+semanticsF Halt              = haltF
+semanticsF (Load reg addr)   = load reg addr
+semanticsF (LoadMI _ _)      = const (const Nothing)
+semanticsF (Set reg simm)    = setF reg simm
+semanticsF (Store reg addr)  = store reg addr
+semanticsF (Add reg addr)    = const (const Nothing)
+semanticsF (Jump simm)       = jump simm
+semanticsF (JumpZero _)      = const (const Nothing)
+
 -- | Applicative semantics is data independent. May be used for
 --   static code analysis.
 --
 --   Note: applicative semantics cannot interact with flags.
 semanticsA :: Instruction -> Semantics Applicative MachineKey Value ()
-semanticsA Halt              = halt
+semanticsA Halt              = haltA
 semanticsA (Load reg addr)   = load reg addr
 semanticsA (LoadMI _ _)      = const (const Nothing)
-semanticsA (Set reg simm)    = set reg simm
+semanticsA (Set reg simm)    = setA reg simm
 semanticsA (Store reg addr)  = store reg addr
 semanticsA (Add reg addr)    = add reg addr
 semanticsA (Jump simm)       = jump simm
@@ -45,26 +60,38 @@ semanticsM (JumpZero simm)   = jumpZero simm
 semanticsM i                 = semanticsA i
 
 -- | Halt the execution.
+--   Functor.
+haltF :: Semantics Functor MachineKey Value ()
+haltF read write = Just $
+    write (F Halted) ((const 1) <$> read (F Halted))
+
+-- | Halt the execution.
 --   Applicative.
-halt :: Semantics Applicative MachineKey Value ()
-halt _ write = Just $
+haltA :: Semantics Applicative MachineKey Value ()
+haltA read write = Just $
     write (F Halted) (pure 1)
 
 -- | Load a value from a memory location to a register.
---   Applicative.
-load :: Register -> MemoryAddress -> Semantics Applicative MachineKey Value ()
+--   Functor.
+load :: Register -> MemoryAddress -> Semantics Functor MachineKey Value ()
 load reg addr read write = Just $
     write (Reg reg) (read (Addr addr))
 
 -- | Set a register value.
+--   Functor.
+setF :: Register -> SImm8 -> Semantics Functor MachineKey Value ()
+setF reg simm read write = Just $
+    write (Reg reg) ((const simm) <$> (read (Reg reg)))
+
+-- | Set a register value.
 --   Applicative.
-set :: Register -> SImm8 -> Semantics Applicative MachineKey Value ()
-set reg simm _ write = Just $
+setA :: Register -> SImm8 -> Semantics Applicative MachineKey Value ()
+setA reg simm read write = Just $
     write (Reg reg) (pure simm)
 
 -- | Store a value from a register to a memory location.
---   Applicative.
-store :: Register -> MemoryAddress -> Semantics Applicative MachineKey Value ()
+--   Functor.
+store :: Register -> MemoryAddress -> Semantics Functor MachineKey Value ()
 store reg addr read write = Just $
     write (Addr addr) (read (Reg reg) )
 
@@ -78,10 +105,10 @@ add reg addr read write = Just $
               boolToValue True  = 1
 
 -- | Unconditional jump.
---   Applicative.
-jump :: SImm8 -> Semantics Applicative MachineKey Value ()
+--   Functor.
+jump :: SImm8 -> Semantics Functor MachineKey Value ()
 jump simm read write = Just $
-    write IC ((+) <$> read IC <*> pure simm)
+    write IC (fmap (+ simm) (read IC))
 
 -- | Indirect memory access.
 --   Monadic.
