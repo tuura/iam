@@ -132,7 +132,7 @@ be encoded using an~\hs{Applicative}. A more powerful abstraction is required.
 \subsubsection{Monadic semantics. Memory indirect Load}
 
 The indirect memory access instruction looks up a value in a memory cell and uses
-it as an effective address in the regular load instruction. Since the effective
+it as the effective address in the regular load instruction. Since the effective
 address can not be determined statically in the general case, this instruction
 has a dynamic data dependency. The polymorphic computational metalanguage requires
 the context~\hs{f} to be a~\hs{Monad} in order to be able to encode such behaviour.
@@ -145,15 +145,33 @@ loadMI reg addr read write = Just $ do
     write (Reg reg) (read (Addr addr'))
 \end{minted}
 
-The first line extracts the read effective address from the monadic context
+The first line extracts the effective address from the monadic context
 and binds the identifier~\hs{addr'} to it. Here is the catch: expressions
 on left-hand-side and right-hand-side of the~\hs{<-} symbol have different types.
 The~\hs{read (Addr addr)} is of type~\hs{Monad f => f MemoryAddress} and the
-identifier~\hs{addr'} has type~\hs{MemoryAddress}. The main feature of~\hs{Monad}
+identifier~\hs{addr'} has type \hs{MemoryAddress}. The main feature of~\hs{Monad}
 is ability to extract a value from an effectful context and pass it in the further
 computation as it was pure. This gives us a possibility to pass the~\hs{addr'}
 as an argument to the next~\hs{read} operation.
 
 Monadic semantics is more powerful that unconstrained, functorial and applicative ones,
 but we are no more able to extract all the dependencies of the computation if
-\hs{f} is restricted to~\hs{Monad}, since some of them will not be static.
+\hs{f} is restricted to~\hs{Monad}, since some of them will not be static. Therefore,
+concurrency oracles can not be built for~\hs{Monad}-flavoured computations.
+
+We have given examples of four kinds of semantic computations: unrestricted, functorial,
+applicative and monadic. In every definition we used functions~\hs{read} and~\hs{write}
+and have constrained the context~\hs{f} with~\hs{Functor},~\hs{Applicative}
+or~\hs{Monad}. The resulting types of~\hs{read} and~\hs{write} follow a certain
+pattern, which may be encoded in the Haskell type system. In fact, a generic
+~\hs{read} may be assigned with type~\hs{forall c. MachineKey -> (c f) Word64} and
+generic~\hs{write} with~\hs{forall c. MachineKey -> (c f) Word64 -> (c f) ()}. Here,
+type variable~\hs{c} mush have kind~\hs{* -> Constraint}. This allows to instantiate
+~\hs{c} with~\hs{Functor}, \hs{Applicative}, \hs{Monad} or any other suitable constraint,
+thus making the metalanguage polymorphic in the computational context.
+
+The next section will present a formal definition of the metalanguage, instruction
+and program semantics. The section~\ref{oracles} will describe the construction of
+concurrency oracles for programs comprising unrestricted, functorial, applicative,
+but not monadic instructions.
+
