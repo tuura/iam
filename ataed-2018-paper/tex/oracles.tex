@@ -1,0 +1,66 @@
+A concurrency oracle is a function taking two computations and statically
+determining if they are data~\emph{concurrent}, i.e. do not share any
+data dependencies.
+
+In this paper we present a way to derive concurrency oracles from the terms of
+the polymorphic computational metalanguage (definition~\ref{def:metalanguage}).
+More specifically, we are aiming to reason about a subset of computations,
+which have only~\emph{static} dependencies, i.e. ones which may be analysed without
+executing the computation with actual data values.
+Therefore we consider a computation to be a value of type~\hs{Semantics Applicative k v a}.
+Note that the~\hs{c} type variable has been instantiated with the~\hs{Applicative}
+constraint. In the Haskell programming language, Applicative functors~\cite{Mcbride:2008:APE:1348940.1348941}
+are a widely used abstraction for representing effectful computation with statically
+known data dependencies.
+
+Let us now introduce the formal definitions and Haskell encodings of the concepts
+required for building concurrent oracles.
+
+\subsection{Dependencies}
+
+First of all we need to defined the notions of input and output dependencies of
+a computation.
+
+\label{def:dependencies}
+\begin{definition}
+\textbf{Input dependency}\\
+Consider a term $f$ of an applicative metalanguage~\hs{Semantics Applicative k v a}. A key $k$ of
+type~\hs{k} is an~\textbf{input dependency} of the term $f$ if the term $f$
+performs a~\textbf{read} of the key $k$
+\todo{define~\textbf{read}}
+\end{definition}
+\begin{definition}
+\textbf{Output dependency}\\
+Consider a term $f$ of an applicative metalanguage~\hs{Semantics Applicative k v a}. A key $k$ of
+type~\hs{k} is an~\textbf{output dependency} of the term $f$ if the term $f$
+performs a~\textbf{write} of the key $k$
+\todo{define~\textbf{write}}
+\end{definition}
+\begin{definition}
+\textbf{Dependencies}\\
+Consider a term $f$ of an applicative metalanguage~\hs{Semantics Applicative k v a}.
+The~\textbf{dependencies} of the term $f$ are a pair of sets $I$ and $O$,
+comprising the input and output dependencies of the term $f$, respectively.
+\end{definition}
+
+In fact, in Haskell, we do not distinguish between input and output dependencies
+in the type level, thus the function determining the dependencies of a computation
+has the following type:
+
+\begin{minted}{haskell}
+dependencies :: Semantics Applicative k v a -> Maybe ([k], [k])
+dependencies =
+\end{minted}
+
+It statically analyses the computation and returns its dependencies.
+\todo{Refer to the definition of the semantics itself and Maybe there}Here~\hs{Maybe}
+is a standard way of representing potentially faulty computation.
+Successful static analysis yields a pair of lists representing the sets of
+input and output dependencies of the computation.
+
+\subsection{Dependencies of IAM instructions}
+
+Examples of dependency graphs of instructions
+
+\subsection{Concurrent oracles for IAM programs}
+

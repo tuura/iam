@@ -1,61 +1,47 @@
 This section present a methodology of assigning IAM programs with~\emph{modular}
 semantics using a~\emph{polymorphic monadic metalanguage}. We call the semantics modular because,
-once encoded in the metalanguage, it may be executed in several contexts yielding
-multiple different meanings of a program. In this paper we will explore (i)
-state transformer semantics (section~\ref{state-trans}) to simulate program
-execution and produce traces, and (ii) data dependency semantics
-(section~\ref{data-deps}) allowing to derive data flow graphs from programs and
-observe possible concurrent behaviour.
+once encoded in the metalanguage, it may be evaluated in different contexts yielding
+meanings of a computation flavoured by the context.
+
+Probably the most obvious context for an instruction architecture semantics is
+stateful execution; interpreting the semantics in the~\hs{State} monad will yield
+a simulator giving users the possibility to execute programs and observe
+their behaviours. Section~\ref{sec:state-trans} presents a state transformer
+semantics for IAM instructions.
+
+Another interesting task is to build a~\emph{concurrency oracle} for computations.
+A concurrency oracle is a function, which is able to identify if two computations
+are~\emph{concurrent}, i.e. do not share any data dependencies.
+In the section section~\ref{sec:oracles} we present a method of extracting
+such oracles from the semantic definitions with certain properties.
+
+Let us now formally define the polymorphic computational metalanguage which we will
+later use to describe the semantics of the IAM instruction set.
 
 \subsection{Polymorphic computational metalanguage}
 
 \begin{definition}
+\label{def:metalanguage}
 % \textbf{Polymorphic monadic metalanguage}
-A computational metalanguage is a monad $M$ equipped with two monadic
-functions: $\forall k \forall v.r: k \rightarrow M v$ and
-$\forall k \forall v.w: k \rightarrow v \rightarrow M~\top$.
+A computational metalanguage is a type constructor $F$ equipped with two effectful
+functions: $\forall k \forall v.r: k \rightarrow F v$ and
+$\forall k \forall v.w: k \rightarrow F v \rightarrow F~\top$.
 \end{definition}
 
-The intuition behind this metalanguage is a concept of a~\emph{store}. A simple
-store instance is a mutable variable dictionary: a data structure associating
-values to keys. A value of type $v$ can be read knowing its key of type $k$,
-hence the type of read function $r$ is
+
 
 We embed the metalanguage in Haskell using the following type:
 
 \begin{minted}{haskell}
-data Computetion tag k v a =
-     Computetion { tag         :: tag
-                 , computation :: forall m. Monad m =>
-                                  (k -> m v) -> (k -> v -> m ()) -> m a }
+type Semantics c k v a = forall f. c f => (k -> f v)
+                                       -> (k -> f v -> f ())
+                                       -> Maybe (f a)
 \end{minted}
 
-A~\hs{Computation} is essentially a rank-2 polymorphic\footnote{A rank-2 polymorphic
+A~\hs{Semantics} is essentially a rank-2 polymorphic\footnote{A rank-2 polymorphic
 function is one taking as a parameter another function, which is in turn (rank-1)
 polymorphic. This feature requires~\hs{RankNTypes} GHC extension to be enabled.}
-monadic action (denoted as~\hs{computation} here) depending on two polymorphic functions,
-which we will usually name \hs{read} and~\hs{write}.
-The ~\hs{tag} field contains auxiliary information which may be used for various
-purposes, such as to tell apart two identical computations.
+effectful computation depending on two polymorphic functions,
+which we will usually referred to as \hs{read} and~\hs{write}.
 
-The metalanguage resembles the~\hs{MonadState} type class:
 
-\begin{minted}{haskell}
-class Monad m => MonadState s m | m -> s where
-    -- | Return the state from the internals of the monad.
-    get :: m s
-    get = state (\s -> (s, s))
-
-    -- | Replace the state inside the monad.
-    put :: s -> m ()
-    put s = state (\_ -> ((), s))
-\end{minted}
-
-A~\hs{MonadState} is a~\hs{Monad} equipped with two extra functions: the first bringing
-out the current state and the second substituting it with an external one.~\hs{MonadState}
-is a powerful abstraction, which allows to emulate mutable state in a pure language.
-However, we would like to employ a more general, yet 
-
-\subsection{Program simulation}
-
-\subsection{Data dependency extraction}

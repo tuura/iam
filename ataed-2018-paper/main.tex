@@ -3,6 +3,8 @@
 % Version 2.20 of 2017/10/04
 %
 \documentclass[runningheads]{llncs}
+\bibliographystyle{splncs04}
+\setcounter{tocdepth}{3}
 %
 \usepackage{graphicx}
 \usepackage{minted}
@@ -11,10 +13,11 @@
 % to display URLs in blue roman font according to Springer's eBook style:
 % \renewcommand\UrlFont{\color{blue}\rmfamily}
 \newcommand{\hs}{\mintinline{haskell}}
+\usepackage{todonotes}
 
 \begin{document}
 %
-\title{Contribution Title\thanks{Supported by organization x.}}
+\title{Concurrent oracles for free\thanks{Supported by organization x.}}
 %
 %\titlerunning{Abbreviated paper title}
 % If the paper title is too long for the running head, you can set
@@ -46,15 +49,17 @@ The abstract should briefly summarize the contents of the paper in
 %
 %
 %
+\tableofcontents
 \section{Introduction and motivation}
 
-\section{Microarchitecture formal model\label{sec:Instructions}}
-\input{tex/instructions.tex}
+\section{The IAM architecture and its formal model\label{sec:IAM}}
+\input{tex/iam.tex}
 
-\section{Formal specification of instruction semantics}
+\section{Instruction semantics\label{sec:semantics}}
 \input{tex/semantics.tex}
 
-\section{Automated extraction of data and control-flow dependencies}
+\section{Deriving concurrency oracles for applicative instructions}
+\input{tex/oracles.tex}
 
 \section{Case study}
 
@@ -65,6 +70,5 @@ The abstract should briefly summarize the contents of the paper in
 % BibTeX users should specify bibliography style 'splncs04'.
 % References will then be sorted and formatted in the correct style.
 %
-\bibliographystyle{splncs04}
 \bibliography{biblio}
 \end{document}
