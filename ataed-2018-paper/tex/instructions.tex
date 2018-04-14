@@ -51,15 +51,16 @@ and modifies the microarchitectural state, returning no information (the
 % be expressed in an unconstrained context. Let us consider semantics of some other
 % instructions to elaborate more on the nature of~\hs{f}.
 
-\vspace{-2em}
 \begin{figure}
-\includegraphics[width=35em]{img/loadJumpAdd.pdf}
+\centerline{\includegraphics[scale=0.7]{img/loadJumpAdd.pdf}}
 \caption{Static data dependencies of~\hs{Load R0 0}, \hs{Add R1 1} and
-\hs{Jump 42} instructions\protect\footnotemark.}
+\hs{Jump 42} instructions\protect\footnotemark. The `0' inside the instruction
+boxes corresponds to the address of an instruction in the program and will be
+useful for visualising blocks of instructions.}
 \end{figure}
 \vspace{-2em}
 \footnotetext{We used the \textsf{algebraic-graphs} Haskell
-library~\cite{Mokhov:2017:AGC:3156695.3122956} to export dependency graphs into
+library~\cite{2017_mokhov_alga} to export dependency graphs into
 the DOT format, and then applied GraphViz~\cite{graphviz} for automated layout.}
 
 %Functorial semantics
@@ -119,7 +120,7 @@ add reg addr = \read write -> Just $
     let result = (+)    <$> read (Reg reg) <*> read (Addr addr)
         isZero = (== 0) <$> result
     in  write (Reg reg) result *>
-        write (Flag Zero)  (boolToValue <$> isZero)
+        write (Flag Zero) (boolToValue <$> isZero)
 \end{minted}
 
 \noindent
@@ -149,7 +150,7 @@ value of type \hs{f Bool}.
 The last two lines of the definition perform two~\hs{write} operations chained
 with the applicative operator~\hs{*>} of
 type~\hs{Applicative f => f a -> f b -> f b}.
-This declares the values~\hs{Reg}~\hs{reg} and~\hs{F}~\hs{Zero} to be output
+This declares the keys~\hs{Reg}~\hs{reg} and~\hs{Flag}~\hs{Zero} to be output
 dependencies of the computation and that the writes must be both performed.
 The the \hs{read} and \hs{write} terms now have the following types:
 
