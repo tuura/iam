@@ -115,14 +115,22 @@ data OracleAnswer k = Concurrent
 \end{minted}
 
 \textbf{Definition (concurrency oracle):\label{def:oracle}}
-Consider two terms with applicative semantics $s1$ and $s2$ of
-type~\hs{Semantics Applicative a}. A~\emph{concurrency oracle} is defined as the
-Haskell function:
+Consider two terms with applicative semantics \hs{s1} and \hs{s2} of the
+type~\hs{Semantics Applicative a}. A~\emph{concurrency oracle} is a
+function of the following type:
 % \vspace{-3em}
 \begin{minted}[xleftmargin=10pt]{haskell}
 concurrencyOracle :: Eq k => Semantics Applicative k v1 a
                           -> Semantics Applicative k v2 a
                           -> Maybe (OracleAnswer k)
+\end{minted}
+
+\noindent
+The function is required to return \hs{Nothing} when one of the given semantics
+is undefined, e.g. if it corresponds to an instruction with dynamic dependencies.
+Below is one possible implementation:
+
+\begin{minted}[xleftmargin=10pt]{haskell}
 concurrencyOracle s1 s2 = do
     (r1, w1) <- dependencies s1
     (r2, w2) <- dependencies s2
@@ -158,33 +166,35 @@ Just Concurrent
 
 \noindent
 Extending the first computation with an additional \hs{Add} instruction causes
-a read conflict:
+a read conflict, as desired:
 \begin{minted}[xleftmargin=10pt]{haskell}
-ghci> let p1 = blockSemanticsA [ Load R0 0
-                               , Add  R0 1 ]
-ghci> let p2 = semanticsA (Load R1 1))
-ghci> concurrencyOracle
+ghci> p1 = blockSemanticsA [Load R0 0, Add R0 1]
+ghci> p2 = semanticsA (Load R1 1)
+ghci> concurrencyOracle p1 p2
 Just (ReadConflict [Addr 1])
 \end{minted}
-We can produce a graphical representation of dependencies between and
-within programs \hs{p1} and \hs{p2} with the following commands:
+
+\noindent
+We can overlay dependency graphs of programs \hs{p1} and \hs{p2} as follows (we
+place the programs at starting addresses 10 and 20, respectively):
 
 \begin{minted}[xleftmargin=10pt]{haskell}
-ghci> let g1 = programDataGraph (zip [0..] [Load R0 0, Add R0 1])
-ghci> let g2 = programDataGraph (zip [0..] [Load R1 1])
+ghci> Just g1 = programDataGraph (zip [10..] [Load R0 0, Add R0 1])
+ghci> Just g2 = programDataGraph (zip [20..] [Load R1 1])
 ghci> drawGraph (overlay g1 g2)
 \end{minted}
 
+\noindent
 The resulting dependency graph is shown in Fig.~\ref{fig-example-graph}.
 % In the graph, instructions labelled with 1 and 2 belong to the blocks~\hs{p1}
 % and~\hs{p2} respectively.
-As one can see, both computations share the register \hs{R0}, just like the
-oracle has determined.
+As one can see, the programs have a read conflict on key \hs{Addr 1},
+just like the oracle has determined.
 
 \begin{figure}
-\vspace{-6mm}
+\vspace{-4mm}
 \centerline{\includegraphics[scale=0.6]{img/oracle2.pdf}}
-\vspace{-6mm}
+\vspace{-3mm}
 \caption{An overlay of static dependency graphs of two blocks of instructions.\label{fig-example-graph}}
-\vspace{-6mm}
+\vspace{-9mm}
 \end{figure}
