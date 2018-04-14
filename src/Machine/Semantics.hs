@@ -6,9 +6,11 @@
 module Machine.Semantics where
 
 import Prelude hiding (read)
+import Control.Monad (join)
 import Metalanguage
 import Machine.Types
 import Machine.Instruction
+import Data.List.NonEmpty
 
 -- | 'MachineKey' will instantiate the 'k' type variable in the 'Semantics'
 --   metalanguage.
@@ -97,12 +99,22 @@ store reg addr read write = Just $
 
 -- | Add a value from memory location to one in a register.
 --   Applicative.
+-- add :: Register -> MemoryAddress -> Semantics Applicative MachineKey Value ()
+-- add reg addr read write = Just $
+--     let z = (+) <$> read (Reg reg) <*> read (Addr addr)
+--     in write (Reg reg) z *> write (F Zero) (boolToValue <$> (== 0) <$> z)
+--         where boolToValue False = 0
+--               boolToValue True  = 1
+
 add :: Register -> MemoryAddress -> Semantics Applicative MachineKey Value ()
-add reg addr read write = Just $
-    let z = (+) <$> read (Reg reg) <*> read (Addr addr)
-    in write (Reg reg) z *> write (F Zero) (boolToValue <$> (== 0) <$> z)
-        where boolToValue False = 0
-              boolToValue True  = 1
+add reg addr = \read write -> Just $
+    let result = (+)    <$> read (Reg reg) <*> read (Addr addr)
+        isZero = (== 0) <$> result
+    in  write (Reg reg) result -- *>
+        -- write (F Zero)  (boolToValue <$> isZero)
+
+boolToValue False = 0
+boolToValue True  = 1
 
 -- | Unconditional jump.
 --   Functor.
@@ -115,8 +127,7 @@ jump simm read write = Just $
 loadMI :: Register -> MemoryAddress -> Semantics Monad MachineKey Value ()
 loadMI reg addr read write = Just $ do
     addr' <- read (Addr addr)
-    v <- read (Addr addr')
-    write (Reg reg) (pure v)
+    write (Reg reg) (read (Addr addr'))
 
 -- | Jump if 'Zero' flag is set.
 --   Monadic.
@@ -126,3 +137,12 @@ jumpZero simm read write = Just $ do
     if (zero == 1) then
         write IC ((+) <$> read IC <*> pure simm)
     else pure ()
+
+-- blockSemanticsA :: [Instruction] -> Semantics Applicative MachineKey Value ()
+-- blockSemanticsA [] = const . const . Just $ pure ()
+-- blockSemanticsA (x:xs) = ((*>)) <$> semanticsA x <*> blockSemanticsA xs
+
+blockSemanticsA :: [Instruction] -> Semantics Applicative MachineKey Value ()
+blockSemanticsA xs = \read write->
+    foldr (\x acc -> ((*>)) <$> acc <*> semanticsA x read write) nop xs
+    where nop = Just $ pure ()

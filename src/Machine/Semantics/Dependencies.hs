@@ -44,11 +44,11 @@ concurrencyOracle :: Eq k =>
                     Semantics Applicative k v1 a
                  -> Semantics Applicative k v2 a
                  -> Maybe (OracleAnswer k)
-concurrencyOracle p q = do
-    (pIns, pOuts) <- dependencies p
-    (qIns, qOuts) <- dependencies q
-    let readConflicts  = intersect pIns qIns
-        writeConflicts = intersect pOuts qOuts
+concurrencyOracle f g = do
+    (fIns, fOuts) <- dependencies f
+    (gIns, gOuts) <- dependencies g
+    let readConflicts  = intersect fIns gIns
+        writeConflicts = intersect fOuts gOuts
     pure $ case (readConflicts, writeConflicts ) of
                 ([], []) -> Concurrent
                 (rs, []) -> ReadConflict rs
