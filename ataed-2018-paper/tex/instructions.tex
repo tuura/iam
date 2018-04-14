@@ -12,7 +12,7 @@ that loads a data word from a memory location to a register. Here is
 how\footnote{We use Haskell throughout the paper, not only because it is one of
 the most popular functional programming languages, but also because it provides
 support for \emph{higher-rank polymorphism}~\cite{jones2007practical}, which is
-essential for the presented appproach.} the semantics of such an instruction can
+essential for the presented approach.} the semantics of such an instruction can
 be encoded in the metalanguage:
 
 \begin{minted}{haskell}
@@ -58,9 +58,9 @@ and modifies the microarchitectural state, returning no information (the
 \hs{Jump 42} instructions\protect\footnotemark.}
 \end{figure}
 \vspace{-2em}
-\footnotetext{We used the algebraic-graphs
-Haskell library~\cite{Mokhov:2017:AGC:3156695.3122956} to implement an automated
-visualiser of data dependencies.}
+\footnotetext{We used the \textsf{algebraic-graphs} Haskell
+library~\cite{Mokhov:2017:AGC:3156695.3122956} to export dependency graphs into
+the DOT format, and then applied GraphViz~\cite{graphviz} for automated layout.}
 
 %Functorial semantics
 \subsubsection{Jump}
@@ -119,7 +119,7 @@ add reg addr = \read write -> Just $
     let result = (+)    <$> read (Reg reg) <*> read (Addr addr)
         isZero = (== 0) <$> result
     in  write (Reg reg) result *>
-        write (F Zero)  (boolToValue <$> isZero)
+        write (Flag Zero)  (boolToValue <$> isZero)
 \end{minted}
 
 \noindent
