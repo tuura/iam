@@ -2,15 +2,9 @@ In this section we introduce a metalanguage for describing the semantics of
 processor instructions by following a few examples. We will use the metalanguage
 to describe the semantics of a part of a simple generic instruction set
 architecture. The later sections will introduce a formal definition of the
-metalanguage, instruction and program semantics and present a method for
+metalanguage, instruction semantics and present a method for
 extracting static data dependencies of instructions with certain properties from
 the semantic definitions leading to a construction of a concurrency oracle.
-
-\begin{figure}
-\includegraphics[width=35em]{img/loadJumpAdd.pdf}
-\caption{Static data dependencies of~\hs{Load R0 0}, \hs{Add R1 1} and
-\hs{Jump 42} instructions.}
-\end{figure}
 
 % Unconstrained semantics
 \subsubsection{Load} Every real-world instruction set includes an instruction
@@ -56,6 +50,17 @@ and modifies the microarchitectural state, returning no information (the
 % type constructor of kind~\hs{* -> *}. However, not every instruction semantics may
 % be expressed in an unconstrained context. Let us consider semantics of some other
 % instructions to elaborate more on the nature of~\hs{f}.
+
+\vspace{-2em}
+\begin{figure}
+\includegraphics[width=35em]{img/loadJumpAdd.pdf}
+\caption{Static data dependencies of~\hs{Load R0 0}, \hs{Add R1 1} and
+\hs{Jump 42} instructions\protect\footnotemark.}
+\end{figure}
+\vspace{-2em}
+\footnotetext{We used the algebraic-graphs
+Haskell library~\cite{Mokhov:2017:AGC:3156695.3122956} to implement an automated
+visualiser of data dependencies.}
 
 %Functorial semantics
 \subsubsection{Jump}
@@ -194,7 +199,7 @@ ability to extract a value from an effectful context and pass it in the further
 computation as if it was pure. This gives us a possibility to pass the~\hs{addr'}
 as an argument to the next~\hs{read} operation.
 
-Monadic semantics is more powerful that unconstrained, functorial and applicative ones,
+Monadic semantics is more powerful than unconstrained, functorial and applicative ones,
 but we are no longer able to extract all the dependencies of the computation if
 \hs{f} is restricted to~\hs{Monad}, since some of them will not be static.
 Therefore, concurrency oracles can not be built for~\hs{Monad}-flavoured
