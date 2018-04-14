@@ -1,8 +1,3 @@
-\begin{figure}
-\centerline{\includegraphics[scale=0.45]{img/sumArray.pdf}}
-\caption{Approximation of static dependencies of an array summation program.\label{fig-sum}}
-\end{figure}
-
 The paper presented a polymorphic metalanguage for describing the semantics of
 a generic instruction set architecture.
 % The metalanguage closely resembles state
@@ -19,4 +14,9 @@ a conditional branch instruction \hs{JumpZero} which modifies the instruction
 counter \hs{IC} only if the previous instruction set the \hs{Zero} flag. In
 this example we conservatively assume that \hs{JumpZero} always has a dependency
 on \hs{IC}.
+
+\begin{figure}
+\centerline{\includegraphics[scale=0.45]{img/sumArray.pdf}}
+\caption{Approximation of static dependencies of an array summation program.\label{fig-sum}}
+\end{figure}
 
