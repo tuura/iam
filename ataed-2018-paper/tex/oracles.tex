@@ -62,7 +62,7 @@ of~\hs{Functor}, where~\hs{fmap _ (Const v) = Const v}}:
 
 \begin{minted}{haskell}
 instance Monoid m => Applicative (Const m) where
-    pure _ = Const mempty
+    pure _              = Const mempty
     Const f <*> Const v = Const (f `mappend` v)
 \end{minted}
 
@@ -82,7 +82,7 @@ dependencies :: Semantics Applicative a
 dependencies task =
     partitionEithers . getConst <$>
     task trackingRead trackingWrite
-  where trackingRead  k    = Const [Left k]
+  where trackingRead  k    =       Const [Left k]
         trackingWrite k fv = fv *> Const [Right k]
 \end{minted}
 
@@ -108,8 +108,8 @@ data dependencies.
 % \vspace{-3em}
 \begin{minted}{haskell}
 data ConcurrencyStatus k = Concurrent
-                         | ReadConflict [k]
-                         | WriteConflict [k]
+                         | ReadConflict      [k]
+                         | WriteConflict     [k]
                          | ReadWriteConflict [k] [k]
 \end{minted}
 % \vspace{-3em}
