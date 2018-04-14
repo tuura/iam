@@ -18,7 +18,7 @@ can be formal enough.
 \textbf{Definition (polymorphic computational metalanguage):\label{def:metalanguage}}
 A term of the metalanguage is a value of the following Haskell type:
 
-\begin{minted}{haskell}
+\begin{minted}[xleftmargin=10pt]{haskell}
 type Semantics c a =
     forall f. c f => (Key -> f Value)
                   -> (Key -> f Value -> f ())
@@ -47,14 +47,15 @@ to~\hs{Applicative}, thus losing the possibility to encode the monadic
 components of the instruction set. \hs{Maybe} allows us to treat such
 partially-defined semantics in a safe and formal way.
 
-\textbf{Definition (instruction set):} An~\emph{instruction set} is an algebraic data type
-comprising as much data constructors as there are instructions.
-If an instruction has an argument, it is defined as an argument of the corresponding data constructor.
+\textbf{Definition (Instruction Set):} An~\emph{instruction set} is an algebraic
+data type with as many data constructors as there are instructions.
+If an instruction has an argument, it is defined as an argument of the
+corresponding data constructor.
 
 Consider an example definition of an instruction set consisting
 of instructions described in the previous sections and the related auxiliary types:
 
-\begin{minted}{haskell}
+\begin{minted}[xleftmargin=10pt]{haskell}
 data Instruction = Load   Register MemoryAddress
                  | LoadMI Register MemoryAddress
                  | Add    Register MemoryAddress
@@ -65,49 +66,53 @@ data Register = R0 | R1 | R2 | R3
 type MemoryAddress = Value
 \end{minted}
 
-\textbf{Definition (instruction set semantics):}
-
-The semantics of an instruction set is a Haskell function mapping
-data constructors of the instruction sets to the terms of the polymorphic
+\noindent
+\textbf{Definition (Instruction Set Semantics):}
+The \emph{semantics of an instruction set} is a Haskell function mapping
+data constructors of the instruction set to the terms of the polymorphic
 computational metalanguage.
 
 The definition of an instruction set semantics is the point where the metalanguage
 has to be made monomorphic, i.e. the context constraint has to be instantiated with
-a concrete one. Now we will consequently present unrestricted, functorial,
-applicative and monadic semantics for the defined instruction set:
+a concrete one. Below we present unrestricted, functorial, applicative and
+monadic semantics for the defined instruction set.
 
-We start from the~\hs{load} instruction which may be executed in any
+We start from the~\hs{Load} instruction which may be executed in any
 context\footnote{The~\hs{Unrestricted} constraint is not exactly idiomatic Haskell and
 requires some tricks to be defined.}:
 
-\begin{minted}{haskell}
+\vspace{-1mm}
+\begin{minted}[xleftmargin=10pt]{haskell}
 semanticsU :: Instruction -> Semantics Unrestricted ()
-semanticsU (Load reg addr)   = load reg addr
-semanticsU _                 = const (const Nothing)
+semanticsU (Load reg addr) = load reg addr
+semanticsU _               = const (const Nothing)
 \end{minted}
 
-\noindent Note how the Haskell wildcard pattern to rule out instructions that require a more
-restrictive context. The~\hs{const (const Nothing)} expression is equivalent
-to~\hs{\_ -> \_ -> Nothing} and constructs a stub for these more restricted
-semantics.
+Note that the Haskell wildcard pattern `\hs{_}' is used to match all instructions
+that require a more restrictive context. The~\hs{const (}\hs{const Nothing)} expression
+is equivalent to~\hs{\read write -> Nothing} and constructs a stub for these
+more restricted semantics. The function \hs{load} has been defined
+in~\S\ref{sec:instructions}.
 
-The instantiation of~\hs{c} with a~\hs{Functor} permits to implement the semantics
-of~\hs{jump}:
+The instantiation of~\hs{c} with a~\hs{Functor} allows us to implement the
+semantics of the instruction~\hs{Jump}:
 
-\begin{minted}{haskell}
+\begin{minted}[xleftmargin=10pt]{haskell}
 semanticsF :: Instruction -> Semantics Functor ()
-semanticsF (Jump simm)       = jump simm
-semanticsF i                 = semanticU i
+semanticsF (Jump simm) = jump simm
+semanticsF i           = semanticU i
 \end{minted}
 
-\noindent Here we reuse the unrestricted semantics for the~\hs{load} instruction.
+\noindent Here we use the definition of \hs{jump} from~\S\ref{sec:instructions}
+and fall back to unrestricted semantics definition \hs{semanticU} for
+the~\hs{Load} instruction, hence avoiding code duplication.
 
-The rest of the semantic definitions are straightforward:
+The remaining definitions are analogous:
 
-\begin{minted}{haskell}
+\begin{minted}[xleftmargin=10pt]{haskell}
 semanticsA :: Instruction -> Semantics Applicative ()
-semanticsA (Add reg addr)    = add reg addr
-semanticsA i                 = semanticsF i
+semanticsA (Add reg addr) = add reg addr
+semanticsA i              = semanticsF i
 
 semanticsM :: Instruction -> Semantics Monad ()
 semanticsM (LoadMI reg addr) = loadMI reg addr
@@ -115,20 +120,21 @@ semanticsM i                 = semanticsA i
 \end{minted}
 
 We can now define the semantics of a block of instructions by reducing
-the lost of instructions:
+a given list of instructions:
 
-\begin{minted}{haskell}
+\begin{minted}[xleftmargin=10pt]{haskell}
 blockSemanticsA :: [Instruction] -> Semantics Applicative ()
 blockSemanticsA xs = \r w ->
-    foldr (\x acc -> ((*>)) <$> acc <*> semanticsA x r w) nop xs
+    foldr (\x acc -> (*>) <$> acc <*> semanticsA x r w) nop xs
     where nop = Just $ pure ()
 \end{minted}
 
-\noindent The semantics of an empty block is~\hs{nop}. The semantics of a non-empty
-block is the semantics of its head chained with the semantics of the tail. We
-need to lift the applicative chaining operation since the~\hs{Maybe} type constructor
-also is an instance of~\hs{Applicative} and the behaviour of~\hs{*>} returns
-the contents of the last~\hs{Just}, which is would be wrong.
+\noindent The semantics of an empty block is~\hs{nop} (i.e. a \emph{no-op}
+instruction). The semantics of a non-empty list is the semantics of its head
+chained with the semantics of the tail. We need to lift the applicative chaining
+operation since the~\hs{Maybe} type constructor also is an instance
+of~\hs{Applicative} and the behaviour of~\hs{*>} returns the contents of the
+last~\hs{Just}, which is would be wrong.
 
 Now, with the instruction semantics defined in terms of the polymorphic
 computational metalanguage, we may proceed to evaluating the metalanguage
@@ -137,11 +143,12 @@ in concrete contexts to get a practical interpretation of the instruction set.
 The next section presents the interpretation of unrestricted, functorial and
 applicative instructions yielding concurrency oracles for programs.
 
-The other interpretations of the metalanguage are also possible. In the technical
-report~\cite{mokhov2018formal} we present a formal model of a custom computer
-architecture developed by RUAG Space Austria GmbH for space missions.
-This work uses a more restricted, monadic metalanguage and makes an accent on
-symbolic execution and automated theorem proving: the framework allows to verify
-functional properties of programs and automatically check if two programs are
-semantically equivalent. Potentially, the metalanguage presented in this paper
-allows these interpretations.
+Other interpretations of the metalanguage are also possible. In the technical
+report~\cite{mokhov2018formal} we present a formal model of a processor
+developed for space missions, where we use a more restricted, monadic
+metalanguage, making emphasis on symbolic program execution and automated
+theorem proving: the framework allows to verify functional properties of
+programs and automatically check if two programs are semantically equivalent.
+The metalanguage presented in this paper also allows these interpretations,
+but the focus of this paper is different: automated derivation of concurrency
+oracles.
