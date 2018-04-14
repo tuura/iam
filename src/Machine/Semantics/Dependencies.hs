@@ -35,7 +35,7 @@ dependencies task =
 data OracleAnswer k = Concurrent
                     | ReadConflict [k]
                     | WriteConflict [k]
-                    | ReadWriteConflict [k] [k]
+                    | ReadWriteConflict [k]
     deriving (Show, Eq)
 
 -- | Find out if two computations are data dependent by matching their
@@ -44,16 +44,17 @@ concurrencyOracle :: Eq k =>
                     Semantics Applicative k v1 a
                  -> Semantics Applicative k v2 a
                  -> Maybe (OracleAnswer k)
-concurrencyOracle f g = do
-    (fIns, fOuts) <- dependencies f
-    (gIns, gOuts) <- dependencies g
-    let readConflicts  = intersect fIns gIns
-        writeConflicts = intersect fOuts gOuts
-    pure $ case (readConflicts, writeConflicts ) of
-                ([], []) -> Concurrent
-                (rs, []) -> ReadConflict rs
-                ([], ws) -> WriteConflict ws
-                (rs, ws) -> ReadWriteConflict rs ws
+concurrencyOracle s1 s2 = do
+    (r1, w1) <- dependencies s1
+    (r2, w2) <- dependencies s2
+    let readConflicts      = intersect r1 r2
+        writeConflicts     = intersect w1 w2
+        readWriteConflicts = intersect (r1 ++ w1) (r2 ++ w2)
+    pure $ case (readConflicts, writeConflicts, readWriteConflicts) of
+        ([], [], [] ) -> Concurrent
+        (rs, [], rws) | rs == rws -> ReadConflict rs
+        ([], ws, rws) | ws == rws -> WriteConflict ws
+        (_ , _ , rws) -> ReadWriteConflict rws
 
 -- | Compute static data flow graph of an instruction. In case of supplying a
 --   monadic, i.e. data-dependent instruction, 'Nothing' is returned.
