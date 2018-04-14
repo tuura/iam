@@ -55,7 +55,7 @@ declare useful instances of standard Haskell type classes such as~\hs{Functor}
 and \hs{Applicative} for \hs{Const a}. We would like to use this data type as a
 computational context for applicative semantics, hence we declare the
 corresponding instance\footnote{\hs{Const a} also has a \hs{Functor} instance,
-where~\hs{fmap _ (Const x) = Const x}}:
+where~\hs{fmap _ (Const x) = Const x}.}:
 
 \begin{minted}[xleftmargin=10pt]{haskell}
 instance Monoid m => Applicative (Const m) where
@@ -67,11 +67,13 @@ This instance exactly describes the desired behaviour of static dependency track
 computational context.~\hs{Const [Key]} is an applicative functor that ignores
 its enclosed value, but accumulates the declared dependencies using the~\hs{Monoid}
 instance for Haskell list data type\footnote{The empty list~\hs{[]} is the
-neutral element and the list concatenation~\hs{(++)} is the associative binary operation}.
+monoid identity element and the list concatenation~\hs{(++)} is the associative
+binary operation.}.
 
 \subsection{Extracting dependencies}
 
-Using the elegant~\hs{Const a b} abstraction we define the \hs{dependencies} function:
+Using the seemingly vacuous datatype \hs{Const} we define the
+function \hs{dependencies}:
 
 \begin{minted}[xleftmargin=10pt]{haskell}
 dependencies :: Semantics Applicative a -> Maybe ([Key], [Key])
@@ -86,11 +88,15 @@ and supply custom tracking \hs{read} and \hs{write} functions. In fact, \hs{read
 does not perform any reading and just tracks the key as an input dependency,
 whereas \hs{write} tracks the key as an output dependency and executes the
 effectful computation \hs{fv}, to appropriately track its dependencies. The
-resulting list of keys gets unwrapped and unzipped by
+resulting list of keys gets unwrapped and unzipped by standard
 \hs{partitionEithers}~\hs{.}~\hs{getConst}.
 
-Now we are fully armed to define concurrency oracles for terms of the
-applicative metalanguage.
+This whole paper is built around the above three-line implementation of the
+function \hs{dependencies}: the rest is just functional programming background
+and folklore, which is required for understanding these three lines of code.
+
+Fully armed with static dependency analysis, we can now define concurrency
+oracles for programs written in the presented metalanguage.
 
 \subsection{Concurrency oracle}
 % \vspace{-2em}
