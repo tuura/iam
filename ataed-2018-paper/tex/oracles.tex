@@ -107,10 +107,10 @@ data dependencies.
 \textbf{Definition (concurrency status):\label{def:concurrency-status}}
 % \vspace{-3em}
 \begin{minted}{haskell}
-data ConcurrencyStatus k = Concurrent
-                         | ReadConflict      [k]
-                         | WriteConflict     [k]
-                         | ReadWriteConflict [k] [k]
+data OracleAnswer k = Concurrent
+                    | ReadConflict [k]
+                    | WriteConflict [k]
+                    | ReadWriteConflict [k]
 \end{minted}
 % \vspace{-3em}
 
@@ -125,20 +125,21 @@ Consider a term $f$ and $g$ of an applicative metalanguage~\hs{Semantics Applica
 A~\emph{concurrency oracle} is defined as a Haskell function
 % \vspace{-3em}
 \begin{minted}{haskell}
-concurrencyOracle :: Semantics Applicative k v1 a
-                  -> Semantics Applicative k v2 a
-                  -> Maybe (ConcurrencyStatus k)
-concurrencyOracle p q = do
-    (pIns, pOuts) <- dependencies p
-    (qIns, qOuts) <- dependencies q
-    let readConflicts  = intersect pIns qIns
-        writeConflicts = intersect pOuts qOuts
-    pure $ case (readConflicts, writeConflicts ) of
-                ([], []) -> Concurrent
-                (rs, []) -> ReadConflict rs
-                ([], ws) -> WriteConflict ws
-                (rs, ws) -> ReadWriteConflict rs ws
-
+concurrencyOracle :: Eq k =>
+                    Semantics Applicative k v1 a
+                 -> Semantics Applicative k v2 a
+                 -> Maybe (OracleAnswer k)
+concurrencyOracle s1 s2 = do
+    (r1, w1) <- dependencies s1
+    (r2, w2) <- dependencies s2
+    let readConflicts      = intersect r1 r2
+        writeConflicts     = intersect w1 w2
+        readWriteConflicts = intersect (r1 ++ w1) (r2 ++ w2)
+    pure $ case (readConflicts, writeConflicts, readWriteConflicts) of
+        ([], [], [] ) -> Concurrent
+        (rs, [], rws) | rs == rws -> ReadConflict rs
+        ([], ws, rws) | ws == rws -> WriteConflict ws
+        (_ , _ , rws) -> ReadWriteConflict rws
 \end{minted}
 % \vspace{-3em}
 In order to determine the concurrency status between two terms, the oracle
