@@ -21,4 +21,3 @@ cabal.project.local
 
 *.dot
 *.png
-*.svg
