@@ -22,7 +22,7 @@ type SImm8 = Value
 type SImm10 = Value
 
 data Register = R0 | R1 | R2 | R3
-    deriving (Show, Eq, Ord, Enum)
+    deriving (Show, Read, Eq, Ord, Enum)
 
 -- | The register bank is represented by a map from registers to their values.
 type RegisterBank = Map.Map Register Value

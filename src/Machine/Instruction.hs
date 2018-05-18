@@ -13,7 +13,7 @@ data Instruction = Halt
                  | Add      Register MemoryAddress
                  | Jump     SImm10
                  | JumpZero SImm10
-    deriving (Show, Eq, Ord)
+    deriving (Show, Read, Eq, Ord)
 
 type Opcode = Word8
 
