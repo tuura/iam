@@ -49,7 +49,7 @@ semanticsA (Set reg simm)    = setA reg simm
 semanticsA (Store reg addr)  = store reg addr
 semanticsA (Add reg addr)    = add reg addr
 semanticsA (Jump simm)       = jump simm
-semanticsA (JumpZero _)      = const (const (const Nothing))
+semanticsA (JumpZero simm)   = jumpZero simm
 
 -- | Monadic semantics may involve data dynamic analysis and must be executed
 --   on a concrete machine state.
@@ -58,7 +58,6 @@ semanticsA (JumpZero _)      = const (const (const Nothing))
 --   instruction may be only assigned monadic semantics.
 semanticsM :: Instruction -> Semantics Monad MachineKey Value ()
 semanticsM (LoadMI reg addr) = loadMI reg addr
-semanticsM (JumpZero simm)   = jumpZero simm
 semanticsM i                 = semanticsA i
 
 -- | Halt the execution.
