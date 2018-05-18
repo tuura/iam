@@ -18,6 +18,7 @@ import Data.Functor.Const
 
 import Metalanguage
 import Machine.Semantics
+import Machine.Types
 import Machine.Instruction
 
 -- | Calculate data dependencies of a semantic computation
@@ -28,9 +29,10 @@ dependencies :: Semantics Applicative k v a
              -> Maybe ([k], [k])
 dependencies task =
     partitionEithers . getConst <$>
-    task trackingRead trackingWrite
+    task trackingRead trackingWrite trackingIte
   where trackingRead  k    = Const [Left k]
         trackingWrite k fv = fv *> Const [Right k]
+        trackingIte condition onTrue onFalse = onTrue *> onFalse
 
 data OracleAnswer k = Concurrent
                     | ReadConflict [k]

@@ -19,4 +19,6 @@ module Metalanguage where
 --   enclosing pure values in 'f'.)
 type Semantics c k v a = forall f. c f => (k -> f v) ->
                                           (k -> f v -> f ()) ->
+                                          (f Bool -> f () -> f () -> f ()) ->
                                           Maybe (f a)
+
