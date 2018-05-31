@@ -16,6 +16,7 @@ import Data.Functor.Const
 import Control.Applicative
 import Data.List.NonEmpty hiding (zip)
 import Text.Read (read)
+import System.Process (callCommand)
 
 emptyRegisters :: RegisterBank
 emptyRegisters = Map.fromList [(R0, 0), (R1, 0), (R2, 0), (R3, 0)]
@@ -48,6 +49,14 @@ readProgram = (fmap parseProgram) . readFile
 
 parseProgram :: String -> Program
 parseProgram = zip [0..] . Prelude.map read . lines
+
+writeSvgProgramDataGraph :: FilePath -> FilePath -> IO ()
+writeSvgProgramDataGraph sourceCode svgFileName = do
+    src <- readProgram sourceCode
+    let graph = fromJust . programDataGraph $ src
+        dotFileName = Prelude.takeWhile (/= '.') svgFileName ++ ".dot"
+    writeFile dotFileName (drawGraph graph)
+    callCommand ("dot -Tsvg " ++ dotFileName ++ " -o " ++ svgFileName)
 
 --------------------------------------------------------------------------------
 -- ATAED'18 paper examples -----------------------------------------------------
