@@ -32,7 +32,7 @@ dependencies task =
     task trackingRead trackingWrite trackingIte
   where trackingRead  k    = Const [Left k]
         trackingWrite k fv = fv *> Const [Right k]
-        trackingIte condition onTrue onFalse = onTrue *> onFalse
+        trackingIte condition onTrue onFalse = condition *> onTrue *> onFalse
 
 data OracleAnswer k = Concurrent
                     | ReadConflict [k]
