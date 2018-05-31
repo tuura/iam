@@ -3,12 +3,14 @@
 
 module Metalanguage where
 
--- | The 'Semantics' data type is a polymorphic state-transformer metalanguage for describing
---   the semantics of programming languages.
+-- | The 'Semantics' data type is a polymorphic state-transformer metalanguage
+--   for describing the semantics of programming languages.
 --
---   The 'Semantics' is a type constructor 'f', a constraint 'c' and two monadic
---   functions: 'read'  of type 'k -> f v'
---   and        'write' of type 'k -> f v -> f ()'.
+--   The 'Semantics' is a type constructor 'f', a constraint 'c' and two
+--   effectful functions:
+--              'read'  of type 'k -> f v',
+--              'write' of type 'k -> f v -> f ()'
+--   and        'ite'   of type 'f Bool -> f () -> f () -> f ()' --- effectful conditional
 --
 --   The whole thing may be though of a sort of a mutable dictionary with keys
 --   of type 'k' and values of type 'v'.

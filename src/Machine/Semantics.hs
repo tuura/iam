@@ -26,7 +26,7 @@ data MachineKey = Reg  Register
 --   static dependency. May be used for
 --   static code analysis.
 --
---   Note: applicative semantics cannot interact with flags.
+--   Note: functorial semantics cannot interact with flags.
 semanticsF :: Instruction -> Semantics Functor MachineKey Value ()
 semanticsF Halt              = haltF
 semanticsF (Load reg addr)   = load reg addr
