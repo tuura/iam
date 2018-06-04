@@ -29,10 +29,9 @@ dependencies :: Semantics Applicative k v a
              -> Maybe ([k], [k])
 dependencies task =
     partitionEithers . getConst <$>
-    task trackingRead trackingWrite trackingIte
+    task trackingRead trackingWrite
   where trackingRead  k    = Const [Left k]
         trackingWrite k fv = fv *> Const [Right k]
-        trackingIte condition onTrue onFalse = condition *> onTrue *> onFalse
 
 data OracleAnswer k = Concurrent
                     | ReadConflict [k]

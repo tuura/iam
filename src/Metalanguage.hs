@@ -10,7 +10,6 @@ module Metalanguage where
 --   effectful functions:
 --              'read'  of type 'k -> f v',
 --              'write' of type 'k -> f v -> f ()'
---   and        'ite'   of type 'f Bool -> f () -> f () -> f ()' --- effectful conditional
 --
 --   The whole thing may be though of a sort of a mutable dictionary with keys
 --   of type 'k' and values of type 'v'.
@@ -21,6 +20,5 @@ module Metalanguage where
 --   enclosing pure values in 'f'.)
 type Semantics c k v a = forall f. c f => (k -> f v) ->
                                           (k -> f v -> f ()) ->
-                                          (f Bool -> f () -> f () -> f ()) ->
                                           Maybe (f a)
 
