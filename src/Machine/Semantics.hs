@@ -50,6 +50,8 @@ semanticsA (Store reg addr)  = store reg addr
 semanticsA (Add reg addr)    = add reg addr
 semanticsA (Jump simm)       = jump simm
 semanticsA (JumpZero _)      = const (const Nothing)
+semanticsA (AdjustVelocity reg addr)  = adjust reg addr
+semanticsA (CheckOperationStatus reg addr1 addr2) = statusCheck reg addr1 addr2
 
 -- | Monadic semantics may involve data dynamic analysis and must be executed
 --   on a concrete machine state.
@@ -99,22 +101,26 @@ store reg addr read write = Just $
 
 -- | Add a value from memory location to one in a register.
 --   Applicative.
--- add :: Register -> MemoryAddress -> Semantics Applicative MachineKey Value ()
--- add reg addr read write = Just $
---     let z = (+) <$> read (Reg reg) <*> read (Addr addr)
---     in write (Reg reg) z *> write (F Zero) (boolToValue <$> (== 0) <$> z)
---         where boolToValue False = 0
---               boolToValue True  = 1
-
 add :: Register -> MemoryAddress -> Semantics Applicative MachineKey Value ()
 add reg addr = \read write -> Just $
     let result = (+)    <$> read (Reg reg) <*> read (Addr addr)
         isZero = (== 0) <$> result
-    in  write (Reg reg) result -- *>
-        -- write (F Zero)  (boolToValue <$> isZero)
+    in  write (Reg reg) result *>
+        write (F Zero)  (boolToValue <$> isZero)
 
 boolToValue False = 0
 boolToValue True  = 1
+
+adjust :: Register -> MemoryAddress -> Semantics Applicative MachineKey Value ()
+adjust reg addr = \read write -> Just $
+    let result = read (Addr addr) *> read (Reg reg)
+    in  write (Addr addr) result
+
+statusCheck :: Register -> MemoryAddress -> MemoryAddress
+            -> Semantics Applicative MachineKey Value ()
+statusCheck reg addr1 addr2 read write = Just $
+    let result = read (Addr addr1) *> read (Addr addr2)
+    in  write (Reg reg) result
 
 -- | Unconditional jump.
 --   Functor.
