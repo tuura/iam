@@ -78,7 +78,11 @@ readProgram :: FilePath -> IO Program
 readProgram = (fmap parseProgram) . readFile
 
 parseProgram :: String -> Program
-parseProgram = zip [0..] . Prelude.map read . lines
+parseProgram = addInstructionAddresses . map read
+             . removeBlankLines . removeComments . lines
+    where removeComments = map (takeWhile (/= '#'))
+          removeBlankLines = filter (not . null)
+          addInstructionAddresses = zip [0..]
 
 writeSvgProgramDataGraph :: FilePath -> FilePath -> IO ()
 writeSvgProgramDataGraph sourceCode svgFileName = do
