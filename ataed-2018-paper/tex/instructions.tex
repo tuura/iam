@@ -1,4 +1,3 @@
-
 In this section we introduce a metalanguage for describing the semantics of
 processor instructions by following a few examples. We will use the metalanguage
 to describe the semantics of a part of a simple generic instruction set
@@ -10,32 +9,35 @@ Fig.~\ref{fig-example} shows three example dependency graphs that can be
 automatically produced by the presented method.
 
 % Unconstrained semantics
-\vspace{-1mm}
-\subsubsection{Load} Every real-world instruction set includes an instruction
-that loads a data word from a memory location to a register. Here is
+\vspace{-2mm}
+\subsubsection{Load} Loading a data word from memory to a register is one of the
+simplest processor instructions. Here is
 how\footnote{We use Haskell throughout the paper, not only because it is one of
 the most popular functional programming languages, but also because it provides
 support for \emph{higher-rank polymorphism}~\cite{jones2007practical}, which is
-essential for the presented approach.} the semantics of such an instruction can
-be encoded in the metalanguage:
+essential for the presented approach.} we encode its semantics in our metalanguage:
 
+\vspace{-1mm}
 \begin{minted}[xleftmargin=10pt]{haskell}
 load reg addr = \read write -> Just $
     write (Reg reg) (read (Addr addr))
 \end{minted}
+\vspace{-1mm}
 
 \noindent
-In this definition we use two metalanguage terms:~\hs{read} and~\hs{write} to
-specify the behaviour of the instruction: it \emph{reads} the memory location
-with \emph{address} \hs{addr}, and \emph{writes} the result into the
+In this definition we use two metalanguage terms \hs{read} and \hs{write} to
+specify the behaviour of the instruction, specifically to \emph{read} the memory
+location at \emph{address} \hs{addr}, and \emph{write} the result into the
 \emph{register} \hs{reg}. Crucially, \hs{read} and \hs{write} are
 \emph{polymorphic over the computational context} \hs{f} and have the following
 types:
 
+\vspace{-1mm}
 \begin{minted}[xleftmargin=10pt]{haskell}
 read  :: forall f. Key -> f Value
 write :: forall f. Key -> f Value -> f ()
 \end{minted}
+\vspace{-1mm}
 
 \noindent
 Here \hs{Key} is used to identify a particular component of the processor state,
@@ -71,7 +73,7 @@ the DOT format, and then applied GraphViz~\cite{graphviz} for automated layout.}
 %Functorial semantics
 \subsubsection{Jump}
 
-Another common instruction is the unconditional control flow transfer:
+Another simple instruction is the unconditional control flow transfer:
 
 \begin{minted}[xleftmargin=10pt]{haskell}
 jump offset = \read write -> Just $
@@ -81,12 +83,11 @@ jump offset = \read write -> Just $
 \noindent
 This instruction adds an \hs{offset} to the \emph{instruction counter}~\hs{IC}
 to transfer the control to another instruction in the program. This definition
-has a crucial difference from~\hs{load}: it uses the
-function~\hs{<$>}\footnote{Function~\hs{<$>} (pronounced ``fmap'') of type
-\hs{Functor f => (a -> b) -> f a -> f b} transforms the values in a
-computational context \hs{f} using a pure function.} of the~\hs{Functor} type
-class, thus restricting~\hs{f} of the \hs{read} and \hs{write} terms to be
-a~\hs{Functor}:
+has a crucial difference from~\hs{load}: it uses the function~\hs{<$>} of
+the~\hs{Functor} type class\footnote{Function~\hs{<$>} (pronounced ``fmap'') of
+type \hs{Functor f => (a -> b) -> f a -> f b} transforms the values in a
+computational context \hs{f} using a pure function.}, thus restricting~\hs{f} of
+the \hs{read} and \hs{write} terms to be a~\hs{Functor}:
 
 \vspace{-1mm}
 \begin{minted}[xleftmargin=10pt]{haskell}

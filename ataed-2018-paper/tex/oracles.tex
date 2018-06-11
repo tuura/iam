@@ -19,8 +19,8 @@ performs a~\hs{write} of the key $k$.
 
 \textbf{Definition (dependencies):\label{def:dependencies}}
 Consider a term $f$ of an applicative metalanguage~\hs{Semantics Applicative a}.
-The~\emph{dependencies} of the term $f$ are a pair of sets $I$ and $O$,
-comprising the input and output dependencies of the term $f$, respectively.
+The~\emph{dependencies} of the term $f$ are sets $I$ and $O$ -- the input and
+output dependencies of the term $f$, respectively.
 
 In the Haskell implementation, we do not distinguish between input and output dependencies
 in the type level, thus the function determining the dependencies of a computation
