@@ -27,8 +27,10 @@ information about the (partial) ordering of instructions. We can therefore
 discard the unnecessary details about which particular register, flag or memory
 location was the cause of the dependency, leading to the following procedure.
 
+\vspace{-5mm}
 \subsubsection{Extracting the behavioural scenario from a program:}
 \begin{enumerate}
+\vspace{-2mm}
     \item Calculate all static data dependencies between the program instructions.
     \item Construct the static dependency graph.
     \item Contract data vertices, keeping the induced arcs between the instructions.
@@ -45,8 +47,10 @@ functionality, which can be exploited by Conditional Partial Order Graphs and
 associated synthesis methods, leading to more efficient hardware implementations
 compared to those obtained by implementing each scenario separately.
 
+\vspace{-5mm}
 \subsubsection{Microcontroller synthesis:}
 \begin{enumerate}
+\vspace{-2mm}
     \item Extract the scenarios from a given set of system control programs.
     \item Synthesise a CPOG containing all the scenarios.
     \item Apply the CPOG workflow for optimisation and compilation to hardware.
@@ -61,6 +65,7 @@ synthesis approach on a simple example. We will consider a system with two
 control programs, extract the scenarios from these programs and synthesise them
 into a CPOG with some shared functionality.
 
+\vspace{-3mm}
 \subsection{Example}
 
 To illustrate the use of the scenario extraction procedure, let us sketch an
@@ -77,9 +82,9 @@ The first program (Fig.~\ref{fig-scenarios-drive-straight}, left) implements
 the ``drive straight'' behaviour, driving both wheels with the same velocity.
 The graph on the right pictures the extracted partial order.
 
-\begin{figure}
+\begin{figure}[H]
 \centering
-  \begin{minipage}[b]{0.5\textwidth}
+\begin{minipage}[b]{0.5\textwidth}
 \begin{minted}[linenos,xleftmargin=50pt]{haskell}
 Load R0 0
 Adjust R0 2
@@ -91,15 +96,18 @@ Adjust R0 3
 \begin{minipage}[b]{0.4\textwidth}
 \includegraphics[scale=0.35]{img/ataed-scenario-drive-straight.pdf}
 \end{minipage}
+\vspace{-3mm}
 \caption{Scenario ``drive straight'' and the corresponding
 partial order.\label{fig-scenarios-drive-straight}}
+\vspace{-7mm}
 \end{figure}
 
 Another behaviour is ``drive and turn'', which is implemented by adjusting the
 velocities with different values (Fig.~\ref{fig-scenarios-turn}). In this case,
 the resulting partial order contains two independent components.
 
-\begin{figure}
+\begin{figure}[H]
+\vspace{-5mm}
 \centering
   \begin{minipage}[b]{0.5\textwidth}
 \begin{minted}[linenos,xleftmargin=50pt]{haskell}
@@ -108,26 +116,39 @@ Load R1 1
 Adjust R0 2
 Adjust R1 3
 \end{minted}
-\vspace{5mm}
+\vspace{3mm}
 \end{minipage}
 % \hfill
 \begin{minipage}[b]{0.4\textwidth}
 \includegraphics[scale=0.35]{img/ataed-scenario-turn.pdf}
 \end{minipage}
+\vspace{-3mm}
 \caption{Scenario ``drive and turn'' and the corresponding
 partial order.\label{fig-scenarios-turn}}
+\vspace{-9mm}
 \end{figure}
 
-Fig.~\ref{fig-scenarios-composition}(bottom) displays the Conditional Partial
+
+\begin{figure}[H]
+\vspace{-5mm}
+\centerline{\includegraphics[scale=0.35]{img/ataed-composition.pdf}}
+\vspace{-4mm}
+\caption{Two operation scenarios and their composition.\label{fig-scenarios-composition}}
+\vspace{-7mm}
+\end{figure}
+
+Fig.~\ref{fig-scenarios-composition} displays the Conditional Partial
 Order Graph which represents the composition of the two scenarios, where the
 additional control input \textsf{x\_0} is used to select the active scenario.
 The partial orders extracted from the programs are efficiently merged, thus
 rendering the CPOG composition to be more compact then a simple list of the
 extracted scenarios. The resulting hardware microcontroller is shown in
-Fig.~\textbf{TODO}.
+Fig.~\ref{fig-scenarios-circuit}.
 
-\begin{figure}
-\centerline{\includegraphics[scale=0.35]{img/ataed-composition.pdf}}
-\caption{Two operation scenarios and their composition.\label{fig-scenarios-composition}}
+\begin{figure}[h]
+\vspace{-5mm}
+\centerline{\includegraphics[scale=0.4]{img/ataed-circuit.pdf}}
+\caption{Hardware microcontroller the CPOG specification.\label{fig-scenarios-circuit}}
+\vspace{-7mm}
 \end{figure}
 
