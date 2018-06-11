@@ -12,7 +12,8 @@ In this paper we present an approach for deriving concurrency oracles for
 events that correspond to processor instructions and blocks of instructions. The
 input to the proposed approach is the \emph{microarchitectural semantics} of
 instructions, which gives a precise description of how an instruction execution
-changes the state of the processor.
+changes the state of the processor. We show how the presented approach can be
+applied for program analysis and for synthesis of efficient hardware microcontrollers.
 
 A popular method to describe microarchitectural semantics is to use a dedicated
 domain-specific language embedded in a high-level general-purpose host language,
@@ -36,5 +37,7 @@ that different instructions require different features from the language used to
 describe them; see~\S\ref{sec:instructions}. We proceed by introducing the
 language for specifying semantics in more detail and then describe the semantics
 of a small instruction set (\S\ref{sec:metalanguage}). The approach to deriving
-concurrency oracles is presented in~\S\ref{sec:oracles}, followed by a
-discussion.
+concurrency oracles is presented in~\S\ref{sec:oracles}. Precise analysis of
+data dependencies between program instructions allows us to synthesise efficient
+hardware controllers for executing predefined collections of programs, as
+demonstrated in~\S\ref{sec:scenarios}, followed by a discussion.

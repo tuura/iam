@@ -47,13 +47,14 @@ of the existing semantics, nor does it rely on writing a parser for the language
 in which the semantics is described, thus justifying the ``for free'' part of
 the title.
 
-The main tool in our arsenal is \emph{polymorphism}: the presented approach is
-only applicable when the semantics of instructions is expressed using polymorphic
-functions that transform the state of the processor microarchitecture. As we
-show in the paper, such polymorphic semantics can be interpreted not only for
-instruction simulation or verification, but also for extracting the information
-about instruction dependencies, thus allowing us to identify concurrency as well
-as various types of conflicts between instructions or blocks of instructions.
+The main tool in our arsenal is \emph{ad-hoc polymorphism}: the presented
+approach is only applicable when the semantics of processor instructions is
+expressed using state transformation functions that can be reinterpreted in
+different contexts. As we show in the paper, such semantics can be interpreted
+not only for instruction simulation or verification, but also for extracting the
+information about instruction dependencies, thus allowing us to identify
+concurrency as well as various types of conflicts between instructions or blocks
+of instructions.
 
 \keywords{concurrency oracle
 \and instruction set architecture
@@ -76,7 +77,7 @@ as various types of conflicts between instructions or blocks of instructions.
 \section{Concurrency oracles\label{sec:oracles}}
 \input{tex/oracles.tex}
 
-\section{Extraction and synthesis of scenario-based hardware specifications}
+\section{Extraction and synthesis of scenario-based hardware specifications\label{sec:scenarios}}
 \input{tex/scenarios.tex}
 
 \section{Conclusion}
