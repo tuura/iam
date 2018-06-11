@@ -1,20 +1,17 @@
-In this section, we present a method for extracting behavioural~\emph{scenarios} from
-system control programs and synthesising them into application-specific
-integrated circuits implementing execution of these scenarios. We exploit the
-existing formalism of Conditional Partial Order Graphs (CPOGs)~\cite{CPOG} for
-synthesising scenarios. CPOGs are included~\cite{scenco-tool} as a plugin in
-the~\textsc{Workcraft} framework~\cite{workcraft-tool}, which implements
-the scenario specification and synthesis methods and handles the mapping of
-CPOGs into interconnection of logic gates to produce a physical implementation
-of the system microcontroller.
+In this section we present a method for extracting behavioural~\emph{scenarios}
+from system control programs and synthesising hardware microcontrollers that can
+execute these scenarios. We rely on Conditional Partial Order Graphs
+(CPOGs)~\cite{CPOG} and associated tool support for synthesis; specifically, we
+use the CPOG plugin~\cite{scenco-tool} of the~\textsc{Workcraft}
+framework~\cite{workcraft-tool}, which provides support for scenario
+specification and synthesis, and handles the translation of CPOGs to circuits
+to produce a physical implementation of the system microcontroller.
 
 \subsection{Extracting scenarios from programs}
 
-We defined a \textit{scenario} to be a list of
-instructions that are executed in a specified order. Formally, a scenario
-$s=(\mathcal{I},\prec)$ is a \textit{partial order}~(PO)~\cite{PO},
-i.e. a binary precedence relation $\prec$ defined on a set of instructions
-$\mathcal{I}$ that satisfies two properties:
+We define a \textit{scenario} as a \textit{partial order}~(PO)
+$(\mathcal{I},\prec)$, i.e. a binary precedence relation~$\prec$ defined on a
+set of instructions $\mathcal{I}$ that satisfies two properties~\cite{PO}:
 
 \begin{itemize}
     \item Irreflexivity: $\forall a \in \mathcal{I}, \neg(a \prec a)$
@@ -23,18 +20,19 @@ $\mathcal{I}$ that satisfies two properties:
     \prec c) \Rightarrow (a \prec c)$
 \end{itemize}
 
-To mine scenarios from programs, we partially reuse the methodology
-used for construction of the concurrency oracles from the previous section.
-The methodology is implemented with the following procedure:
+To extract scenarios from programs, we reuse the dependency analysis that we
+developed for implementing concurrency oracles in the previous section. As one
+can see from our definition of scenarios, we only require to keep the
+information about the (partial) ordering of instructions. We can therefore
+discard the unnecessary details about which particular register, flag or memory
+location was the cause of the dependency, leading to the following procedure.
 
-\subsubsection{Scenario extraction:}
+\subsubsection{Extracting the behavioural scenario from a program:}
 \begin{enumerate}
-    \item Calculate the static data dependencies of the program.
-    \item Construct the static dependencies graph.
-    \item Remove the data-vertices preserving the transitive connections between
-        instruction-vertices.
-    \item A~\emph{transitive closure} of the resulting graph will display the
-        partial order on the set of events represented as instruction-vertices.
+    \item Calculate all static data dependencies between the program instructions.
+    \item Construct the static dependency graph.
+    \item Contract data vertices, keeping the induced arcs between the instructions.
+    \item Perform the \emph{transitive closure} of the resulting graph.
 \end{enumerate}
 
 \subsection{Scenario encoding and synthesis}
@@ -42,51 +40,50 @@ The methodology is implemented with the following procedure:
 In the context of this paper, we consider control systems which are programmed
 in low-level assembly-like languages. Using the procedure from the previous subsection,
 we can extract behavioural scenarios, represented as partial orders, from the
-system's control programs. It is often the case for these partial orders to have
-some functionality shared. The existing Conditional Partial Order Graphs
-formalism allows compositional combination of multiple partial orders into one
-structure, leading for more efficient implementation of the composed
-specification, in comparison to one implementing the scenarios separately.
+system's control programs. These partial orders often have some shared
+functionality, which can be exploited by Conditional Partial Order Graphs and
+associated synthesis methods, leading to more efficient hardware implementations
+compared to those obtained by implementing each scenario separately.
 
-\subsubsection{Program synthesis:}
+\subsubsection{Microcontroller synthesis:}
 \begin{enumerate}
-    \item Extract all scenarios from the set of system's control programs.
-    \item Synthesis the scenarios into a CPOG to enable functionality sharing.
-    \item Use the CPOG model workflow (optimisation, compilation to hardware circuit).
+    \item Extract the scenarios from a given set of system control programs.
+    \item Synthesise a CPOG containing all the scenarios.
+    \item Apply the CPOG workflow for optimisation and compilation to hardware.
 \end{enumerate}
 
-The Conditional Partial Order Graphs formalism is supported in the open source
-framework WORKCRAFT, which facilitates construction and visualisation of partial
-orders, their synthesis into a CPOG and compilation to logical circuits.
+% The Conditional Partial Order Graphs formalism is supported in the open source
+% framework Workcraft, which facilitates construction and visualisation of partial
+% orders, their synthesis into a CPOG and compilation to logical circuits.
 
-In the next subsection, we will illustrate the scenario instruction and
-synthesis procedures on a simple example. We will consider a system and two
+In the next subsection we will illustrate the described microcontroller
+synthesis approach on a simple example. We will consider a system with two
 control programs, extract the scenarios from these programs and synthesise them
-into a CPOG with some functionality shared.
+into a CPOG with some shared functionality.
 
 \subsection{Example}
 
 To illustrate the use of the scenario extraction procedure, let us sketch an
-example of system controlling an hypothetical dual-motor autonomous vehicle.
+example of a system controlling a hypothetical dual-motor autonomous vehicle.
 The vehicle has two motors directly driving its left and right front wheels.
-The system control unit has a simple application-specific instruction set, 4
-general-purpose registers and a memory unit with 255 cells. The velocity of the
-left and right motor is controlled by the values in the cell 0 and 1, respectively.
-The motor's velocity may be adjusted with the command~\hs{Adjust}
-supplying the value in a register and referring the motor index (0 or 1).
+The system control unit has a simple application-specific instruction set, two
+general-purpose registers and a memory unit with four cells. The input to the
+unit is provided in memory cells 0 and 1. The unit controls the velocity of the
+left and right motors by outputting values to the cells 2 and 3, respectively.
+A motor's velocity may be adjusted with the instruction~\hs{Adjust} supplying
+the input value in a register and referring a target motor (2 or 3).
 
-The first program (figure~\ref{fig-scenarios-drive-straight}, on the left) implements
-the ``drive straight'' behaviour, driving both wheels with the same power.
+The first program (Fig.~\ref{fig-scenarios-drive-straight}, left) implements
+the ``drive straight'' behaviour, driving both wheels with the same velocity.
 The graph on the right pictures the extracted partial order.
 
 \begin{figure}
-\vspace{-5mm}
 \centering
   \begin{minipage}[b]{0.5\textwidth}
-\begin{minted}[linenos]{haskell}
-Load R0 254
-Adjust R0 0
-Adjust R0 1
+\begin{minted}[linenos,xleftmargin=50pt]{haskell}
+Load R0 0
+Adjust R0 2
+Adjust R0 3
 \end{minted}
 \vspace{5mm}
 \end{minipage}
@@ -94,23 +91,22 @@ Adjust R0 1
 \begin{minipage}[b]{0.4\textwidth}
 \includegraphics[scale=0.35]{img/ataed-scenario-drive-straight.pdf}
 \end{minipage}
-\caption{Simple behaviour scenario and the corresponding
+\caption{Scenario ``drive straight'' and the corresponding
 partial order.\label{fig-scenarios-drive-straight}}
 \end{figure}
 
-Another behaviour is ``drive and turn'' is implemented by adjusting the velocities
-with different values (figure~\ref{fig-scenarios-turn}). In this case, the
-resulting partial order contains two independent components.
+Another behaviour is ``drive and turn'', which is implemented by adjusting the
+velocities with different values (Fig.~\ref{fig-scenarios-turn}). In this case,
+the resulting partial order contains two independent components.
 
 \begin{figure}
-\vspace{-5mm}
 \centering
   \begin{minipage}[b]{0.5\textwidth}
-\begin{minted}[linenos]{haskell}
-Load R0 254
-Load R1 255
-Adjust R0 0
-Adjust R1 1
+\begin{minted}[linenos,xleftmargin=50pt]{haskell}
+Load R0 0
+Load R1 1
+Adjust R0 2
+Adjust R1 3
 \end{minted}
 \vspace{5mm}
 \end{minipage}
@@ -118,15 +114,17 @@ Adjust R1 1
 \begin{minipage}[b]{0.4\textwidth}
 \includegraphics[scale=0.35]{img/ataed-scenario-turn.pdf}
 \end{minipage}
-\caption{Simple behaviour scenario and the corresponding
+\caption{Scenario ``drive and turn'' and the corresponding
 partial order.\label{fig-scenarios-turn}}
 \end{figure}
 
-The figure~\ref{fig-scenarios-composition} displays the Conditional Partial Order Graph
-which represents the composition of the two behaviours. On of the partial orders
-extracted from the second program gets merged into the one extracted from the first
-program, thus rendering the CPOG composition to be more compact then simple overlay of
-the extracted scenarios.
+Fig.~\ref{fig-scenarios-composition}(bottom) displays the Conditional Partial
+Order Graph which represents the composition of the two scenarios, where the
+additional control input \textsf{x\_0} is used to select the active scenario.
+The partial orders extracted from the programs are efficiently merged, thus
+rendering the CPOG composition to be more compact then a simple list of the
+extracted scenarios. The resulting hardware microcontroller is shown in
+Fig.~\textbf{TODO}.
 
 \begin{figure}
 \centerline{\includegraphics[scale=0.35]{img/ataed-composition.pdf}}
