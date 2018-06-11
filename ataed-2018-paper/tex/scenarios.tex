@@ -125,14 +125,13 @@ Adjust R1 3
 \vspace{-3mm}
 \caption{Scenario ``drive and turn'' and the corresponding
 partial order.\label{fig-scenarios-turn}}
-\vspace{-9mm}
+\vspace{-8mm}
 \end{figure}
-
 
 \begin{figure}[H]
 \vspace{-5mm}
 \centerline{\includegraphics[scale=0.35]{img/ataed-composition.pdf}}
-\vspace{-4mm}
+\vspace{-2mm}
 \caption{Two operation scenarios and their composition.\label{fig-scenarios-composition}}
 \vspace{-7mm}
 \end{figure}
@@ -142,13 +141,14 @@ Order Graph which represents the composition of the two scenarios, where the
 additional control input \textsf{x\_0} is used to select the active scenario.
 The partial orders extracted from the programs are efficiently merged, thus
 rendering the CPOG composition to be more compact then a simple list of the
-extracted scenarios. The resulting hardware microcontroller is shown in
-Fig.~\ref{fig-scenarios-circuit}.
+extracted scenarios. The resulting hardware microcontroller, mapped to a 2-input
+gate library, is shown in Fig.~\ref{fig-scenarios-circuit}.
 
 \begin{figure}[h]
 \vspace{-5mm}
 \centerline{\includegraphics[scale=0.4]{img/ataed-circuit.pdf}}
-\caption{Hardware microcontroller the CPOG specification.\label{fig-scenarios-circuit}}
+\vspace{-3mm}
+\caption{Synthesised hardware microcontroller.\label{fig-scenarios-circuit}}
 \vspace{-7mm}
 \end{figure}
 
