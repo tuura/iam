@@ -1,7 +1,9 @@
 {-# LANGUAGE ConstraintKinds,
              RankNTypes #-}
 
-module Metalanguage where
+module Metalanguage (
+    Semantics
+    ) where
 
 -- | The 'Semantics' data type is a polymorphic state-transformer metalanguage
 --   for describing the semantics of programming languages.

@@ -45,22 +45,4 @@ readIO k = do putStr (show k ++ " = "); Prelude.read <$> getLine
 
 writeIO :: (Show k, Show v) => k -> v -> IO ()
 writeIO k v = putStrLn (show k ++ " := " ++ show v);
-
--- track :: Monad m => Semantics Monad k v a
---       -> (k -> m v)
---       -> (k -> v -> m ())
---       -> m ([k], [k])
--- track task read write =
---     partitionEithers <$> execWriterT (task trackingRead trackingWrite)
---   where
---     trackingRead k = tell [Left k] >> lift (read k)
---     trackingWrite k _ = tell [Right k]
-
--- -- Example: modular semantics: simulation with dependencies
--- trackingSimulate :: Semantics Monad k v a
---                  -> s
---                  -> (k -> State s v)
---                  -> (k -> v -> State s ())
---                  -> (([k], [k]), s)
--- trackingSimulate op s read write = runState (track op read write) s
 --------------------------------------------------------------------------------

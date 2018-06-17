@@ -1,7 +1,13 @@
-module Machine.Instruction where
+module Machine.Instruction (
+    -- * Instruction syntax and related types
+    Instruction (..), Opcode, InstructionAddress,
+
+    -- * Program type and program parser
+    Program,
+    parseProgram, readProgram
+    ) where
 
 import Data.Word
-import Data.Bits
 import Machine.Types
 
 -- | Iam instructions
@@ -20,8 +26,6 @@ data Instruction = Halt
 
 type Opcode = Word8
 
-type InstructionCode = Word64
-
 -- | Programs are stored in program memory.
 type InstructionAddress = Value
 
@@ -32,6 +36,11 @@ type Program = [(InstructionAddress, Instruction)]
 readProgram :: FilePath -> IO Program
 readProgram = (fmap parseProgram) . readFile
 
+-- | Quick-and-dirty program parser.
+--
+--   Comments start with the '#' character.
+--
+--   Blank lines are ignored.
 parseProgram :: String -> Program
 parseProgram = addInstructionAddresses . map read
              . removeBlankLines . removeComments . lines

@@ -9,7 +9,9 @@
 -- The state of the Inglorious Adding Machine.
 --
 --------------------------------------------------------------------------------
-module Machine.State where
+module Machine.State (
+    MachineState (..)
+    ) where
 
 import Machine.Types
 import Machine.Instruction

@@ -1,6 +1,6 @@
 --------------------------------------------------------------------------------
 -- |
--- Module      :  Machine.State
+-- Module      :  Machine.Types
 -- Copyright   :  (c) Georgy Lukyanov, Andrey Mokhov 2017
 --
 -- Maintainer  :  lukyanov.georgy@gmail.com
@@ -9,7 +9,25 @@
 -- The domain types for the entities of the Inglorious adding machine.
 --
 --------------------------------------------------------------------------------
-module Machine.Types where
+module Machine.Types (
+    -- * Types of values operated by the IAM instruction set
+    Value,
+
+    -- * Signed immediate arguments
+    SImm8, SImm10,
+
+    -- * Registers
+    Register (..), RegisterBank,
+
+    -- * Memory
+    MemoryAddress, Memory,
+
+    -- * Flags
+    Flag (..), Flags, FlagId, flagId,
+
+    -- System clock
+    Clock
+    ) where
 
 import qualified Data.Map.Strict as Map
 

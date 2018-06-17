@@ -144,10 +144,6 @@ jumpZero simm read write = Just $ do
         write IC ((+) <$> read IC <*> pure simm)
     else pure ()
 
--- blockSemanticsA :: [Instruction] -> Semantics Applicative MachineKey Value ()
--- blockSemanticsA [] = const . const . Just $ pure ()
--- blockSemanticsA (x:xs) = ((*>)) <$> semanticsA x <*> blockSemanticsA xs
-
 blockSemanticsA :: [Instruction] -> Semantics Applicative MachineKey Value ()
 blockSemanticsA xs = \read write->
     foldr (\x acc -> ((*>)) <$> acc <*> semanticsA x read write) nop xs

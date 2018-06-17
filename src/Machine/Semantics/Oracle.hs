@@ -1,6 +1,20 @@
 {-# LANGUAGE RankNTypes #-}
+-----------------------------------------------------------------------------
+-- |
+-- Module      :  Machine.Types
+-- Copyright   :  (c) Georgy Lukyanov, Andrey Mokhov 2017
+--
+-- Maintainer  :  lukyanov.georgy@gmail.com
+-- Stability   :  experimental
+--
+-- Concurrency oracle for determining the concurrency relation between two
+-- programs basing in their data dependencies. This is possible only for 
+--
+-----------------------------------------------------------------------------
 
-module Machine.Semantics.Oracle where
+module Machine.Semantics.Oracle (
+
+    ) where
 
 import Data.List (intersect)
 import Metalanguage
