@@ -9,6 +9,7 @@ import Data.Maybe (fromJust)
 import Data.String (fromString)
 
 import Machine.Instruction
+import Machine.Semantics
 import Machine.Semantics.Dependencies
 
 -- | Compute static data flow graph of an instruction. In case of supplying a

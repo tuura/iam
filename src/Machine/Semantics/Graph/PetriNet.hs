@@ -74,16 +74,6 @@ drawPN g = export style g
     names = vertexSet g
     instructionLabel a i = fromString (show a <> "|" <> show i)
 
-readProgram :: FilePath -> IO Program
-readProgram = (fmap parseProgram) . readFile
-
-parseProgram :: String -> Program
-parseProgram = addInstructionAddresses . map read
-             . removeBlankLines . removeComments . lines
-    where removeComments = map (takeWhile (/= '#'))
-          removeBlankLines = filter (not . null)
-          addInstructionAddresses = zip [0..]
-
 writeSvgProgramDataGraph :: FilePath -> FilePath -> IO ()
 writeSvgProgramDataGraph sourceCode svgFileName = do
     src <- readProgram sourceCode

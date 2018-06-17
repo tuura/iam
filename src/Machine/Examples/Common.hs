@@ -10,6 +10,8 @@ import Machine.Instruction
 import Metalanguage
 import Machine.Semantics
 import Machine.Semantics.Dependencies
+import Machine.Semantics.Oracle
+import Machine.Semantics.Graph.Dataflow
 import Data.Maybe (fromJust)
 import Algebra.Graph
 import Data.Functor.Const
@@ -41,14 +43,6 @@ ex1 = zip [0..]
     -- , JumpZero 1
     -- , Add  R0 1
     ]
-
-
-
-readProgram :: FilePath -> IO Program
-readProgram = (fmap parseProgram) . readFile
-
-parseProgram :: String -> Program
-parseProgram = zip [0..] . Prelude.map read . lines
 
 writeSvgProgramDataGraph :: FilePath -> FilePath -> IO ()
 writeSvgProgramDataGraph sourceCode svgFileName = do
