@@ -13,7 +13,8 @@
 -----------------------------------------------------------------------------
 
 module Machine.Semantics.Oracle (
-
+    OracleAnswer (..),
+    concurrencyOracle
     ) where
 
 import Data.List (intersect)
