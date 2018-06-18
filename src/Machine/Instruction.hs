@@ -17,8 +17,8 @@ data Instruction = Halt
                  | Set      Register SImm8
                  | Store    Register MemoryAddress
                  | Add      Register MemoryAddress
-                 | Jump     SImm10
-                 | JumpZero SImm10
+                 | Jump     SImm8
+                 | JumpZero SImm8
 
                  | AdjustVelocity Register MemoryAddress
                  | CheckOperationStatus Register MemoryAddress MemoryAddress

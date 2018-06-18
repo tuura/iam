@@ -14,7 +14,7 @@ module Machine.Types (
     Value,
 
     -- * Signed immediate arguments
-    SImm8, SImm10,
+    SImm8,
 
     -- * Registers
     Register (..), RegisterBank,
@@ -36,8 +36,6 @@ import qualified Data.Map.Strict as Map
 type Value = Int
 
 type SImm8 = Value
-
-type SImm10 = Value
 
 data Register = R0 | R1 | R2 | R3
     deriving (Show, Read, Eq, Ord, Enum)
