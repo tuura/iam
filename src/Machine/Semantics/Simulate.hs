@@ -5,6 +5,7 @@
 module Machine.Semantics.Simulate where
 
 import Prelude hiding (readIO)
+import Control.Selective
 import Control.Monad.State
 import Machine.Types
 import qualified Data.Map as Map
