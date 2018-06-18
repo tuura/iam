@@ -12,6 +12,7 @@
 --------------------------------------------------------------------------------
 module Machine.Assembly where
 
+import Data.SBV hiding (label)
 import Control.Monad (ap)
 import Machine.Types
 
@@ -79,7 +80,13 @@ halt = write (Halt)
 
 -- | Translate the script source code to a program --- a list of instructions
 ---  with assigned instruction addresses
+-- assemble :: Script -> Program
+-- assemble s = zip [0..] prg
+--   where
+--     prg = reverse $ snd $ runWriter s []
+
 assemble :: Script -> Program
-assemble s = zip [0..] prg
+assemble s = foldr (\(c, p) a -> writeArray a p c) a0 (zip (map literal prg) [0..])
   where
+    a0  = mkSFunArray (const $ literal Halt)
     prg = reverse $ snd $ runWriter s []

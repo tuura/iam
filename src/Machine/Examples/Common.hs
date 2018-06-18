@@ -14,7 +14,7 @@ emptyRegisters = mkSFunArray $ const 0
 emptyFlags :: Flags
 emptyFlags = mkSFunArray $ const false
 
-initialiseMemory :: [(MemoryAddress, Value)] -> Memory
+initialiseMemory :: [(SBV MemoryAddress, SBV Value)] -> Memory
 initialiseMemory =
     foldr (\(a, v) m -> writeArray m a v) (mkSFunArray $ const 0)
 
@@ -24,7 +24,7 @@ dumpMemory from to m = map (readArray m) [literal from..literal to]
 templateState :: Script -> Memory -> MachineState
 templateState src mem = MachineState { registers = emptyRegisters
                                , instructionCounter = 0
-                               , instructionRegister = Jump 0
+                               , instructionRegister = literal $ Jump 0
                                , program = assemble src
                                , flags = emptyFlags
                                , memory = mem

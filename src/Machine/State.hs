@@ -16,16 +16,17 @@ module Machine.State where
 import Data.SBV (Mergeable, symbolicMerge)
 import Control.Monad.State.Strict
 import GHC.Generics (Generic)
+import Data.SBV
 import Machine.Types
 import Machine.Assembly
 
 -- | The state of a Iam machine
 data MachineState = MachineState
     { registers           :: RegisterBank
-    , instructionCounter  :: InstructionAddress
-    , instructionRegister :: Instruction
+    , instructionCounter  :: SBV InstructionAddress
+    , instructionRegister :: SBV Instruction
     , flags               :: Flags
     , memory              :: Memory
     , program             :: Program
-    , clock               :: Clock
+    , clock               :: SBV Clock
     } deriving (Show, Generic, Mergeable)
