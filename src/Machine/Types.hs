@@ -36,10 +36,11 @@ type SImm8 = Int8
 type SImm10 = Int16
 
 -- | Iam has 4 general-purpose registers.
-type Register = Word8
+data Register = R0 | R1 | R2 | R3
+    deriving (Eq, Ord, Show, Read, Data.Data, HasKind, SymWord)
 
 -- | The register bank is represented by a map from registers to their values.
-type RegisterBank = SFunArray Word8 Word64
+type RegisterBank = SFunArray Register Value
 
 -- | Iam memory can hoload 256 values.
 type MemoryAddress = Word8
@@ -49,14 +50,12 @@ type Memory = SFunArray MemoryAddress Value
 
 -- | Boolean 'Flag's indicate the current status of Iam.
 data Flag = Zero
+          | Compare
           | Halted
-          deriving (Enum, Eq, Ord, Show)
-
-flagId :: Flag -> SWord8
-flagId = literal . fromIntegral . fromEnum
+          deriving (Eq, Ord, Show, Read, Data.Data, HasKind, SymWord)
 
 -- | The state of flags is represented by a map from flags to their values.
-type Flags = SFunArray Word8 Bool
+type Flags = SFunArray Flag Bool
 
 -- | 'Clock' is the current time measured in clock cycles. It used to model the
 -- effect of the 'Iam.Semantics.wait' instruction.
@@ -69,30 +68,11 @@ data Instruction = Halt
                  | Set      Register SImm8
                  | Store    Register MemoryAddress
                  | Add      Register MemoryAddress
+                 | CmpGT    Register MemoryAddress
+                 | JumpGT   SImm10
                  | Jump     SImm10
                  | JumpZero SImm10
     deriving (Eq, Ord, Show, Read, Data.Data, HasKind, SymWord)
-
--- instance Mergeable Instruction where
---     symbolicMerge _ _ Halt Halt = Halt
---     -- symbolicMerge _ _ _ Halt = Halt
---     -- symbolicMerge _ _ Halt _ = Halt
---     symbolicMerge f t (Load rX1 dmemaddr1) (Load rX2 dmemaddr2) =
---         Load (symbolicMerge f t rX1 rX2) (symbolicMerge f t dmemaddr1 dmemaddr2)
---     symbolicMerge f t (LoadMI rX1 dmemaddr1) (LoadMI rX2 dmemaddr2) =
---         LoadMI (symbolicMerge f t rX1 rX2) (symbolicMerge f t dmemaddr1 dmemaddr2)
---     symbolicMerge f t (Set rX1 simm1) (Set rX2 simm2)     =
---         Set (symbolicMerge f t rX1 rX2) (symbolicMerge f t simm1 simm2)
---     symbolicMerge f t (Store rX1 dmemaddr1) (Store rX2 dmemaddr2) =
---         Store (symbolicMerge f t rX1 rX2) (symbolicMerge f t dmemaddr1 dmemaddr2)
---     symbolicMerge f t (Add rX1 dmemaddr1) (Add rX2 dmemaddr2) =
---         Add (symbolicMerge f t rX1 rX2) (symbolicMerge f t dmemaddr1 dmemaddr2)
---     symbolicMerge f t (Jump simm1) (Jump simm2) =
---         Jump (symbolicMerge f t simm1 simm2)
---     symbolicMerge f t (JumpZero simm1) (JumpZero simm2) =
---         JumpZero (symbolicMerge f t simm1 simm2)
---     symbolicMerge _ _ a b =
---         error $ "Iam.Types: No least-upper-bound for " ++ show (a, b)
 
 -- | Programs are stored in program memory (currently, up to 1024 instructions).
 type InstructionAddress = Word16

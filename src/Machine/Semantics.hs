@@ -91,20 +91,20 @@ writeRegister register value = do
 
 -- | Lookup the value of a given 'Flag'. If the flag is not currently assigned
 -- any value, it is assumed to be 'False'.
-readFlag :: Flag -> Machine (SBV Bool)
+readFlag :: SBV Flag -> Machine (SBV Bool)
 readFlag flag = do
     currentState <- get
-    pure $ readArray (flags currentState) (flagId flag)
+    pure $ readArray (flags currentState) flag
 
 -- | Set a given 'Flag' to the specified Boolean value.
 --   We assume that it takes 1 clock cycle to access
 --   the flag register in hardware.
-writeFlag :: Flag -> (SBV Bool) -> Machine ()
+writeFlag :: SBV Flag -> (SBV Bool) -> Machine ()
 writeFlag flag value = do
     delay 1
     modify $ \currentState ->
         currentState {
-            flags = writeArray (flags currentState) (flagId flag) value}
+            flags = writeArray (flags currentState) flag value}
 
 --------------------------------------------------------------------------------
 ------------ Program -----------------------------------------------------------
@@ -119,9 +119,11 @@ execute (Store    rX dmemaddr) = executeStore    rX dmemaddr
 execute (Add      rX dmemaddr) = executeAdd      rX dmemaddr
 execute (Jump     simm       ) = executeJump     simm
 execute (JumpZero simm       ) = executeJumpZero simm
+execute (CmpGT    rx dmemaddr) = executeCmpGT    rx dmemaddr
+execute (JumpGT   simm       ) = executeJumpGT   simm
 
 executeHalt :: Machine ()
-executeHalt = writeFlag Halted true
+executeHalt = writeFlag (literal Halted) true
 
 executeLoad :: Register -> MemoryAddress -> Machine ()
 executeLoad rX dmemaddr = readMemory (literal dmemaddr) >>=
@@ -143,7 +145,7 @@ executeAdd rX dmemaddr = do
     x <- readRegister (literal rX)
     y <- readMemory (literal dmemaddr)
     let z = x + y
-    writeFlag Zero (z .== 0)
+    writeFlag (literal Zero) (z .== 0)
     writeRegister (literal rX) z
 
 executeJump :: SImm10 -> Machine ()
@@ -154,9 +156,22 @@ executeJump simm =
 
 executeJumpZero :: SImm10 -> Machine ()
 executeJumpZero simm = do
-    zeroIsSet <- readFlag Zero
+    zeroIsSet <- readFlag (literal Zero)
     ic <- instructionCounter <$> get
     let ic' = ite zeroIsSet (ic + (fromSImm10 . literal $ simm)) ic
+    modify $ \currentState ->
+        currentState {instructionCounter = ic'}
+
+executeCmpGT :: Register -> MemoryAddress -> Machine ()
+executeCmpGT rx dmemaddr = do
+    gt <- (.>) <$> readRegister (literal rx) <*> readMemory (literal dmemaddr)
+    writeFlag (literal Compare) gt
+
+executeJumpGT :: SImm10 -> Machine ()
+executeJumpGT simm = do
+    isGt <- readFlag (literal Compare)
+    ic <- instructionCounter <$> get
+    let ic' = ite isGt (ic + (fromSImm10 . literal $ simm)) ic
     modify $ \currentState ->
         currentState {instructionCounter = ic'}
 --------------------------------------------------------------------------------
@@ -177,14 +192,21 @@ fetchInstruction :: Machine ()
 fetchInstruction =
     get >>= readProgram . instructionCounter >>= writeInstructionRegister
 
-readProgram :: SBV InstructionAddress -> Machine (SBV Instruction)
+readProgram :: SBV InstructionAddress -> Machine (Instruction)
 readProgram addr = do
     currentState <- get
     delay 1
     pure $ readArray (program currentState) addr
 
 readInstructionRegister :: Machine Instruction
-readInstructionRegister = fromJust . unliteral . instructionRegister <$> get
+readInstructionRegister = do
+    i <- unliteral . instructionRegister <$> get
+    case i of
+        Just i  -> pure i
+        Nothing -> error "Error: InstructionRegister became symbolic."
+
+-- readInstructionRegister :: Machine (SBV Instruction)
+-- readInstructionRegister = instructionRegister <$> get
 
 writeInstructionRegister :: SBV Instruction -> Machine ()
 writeInstructionRegister instruction =

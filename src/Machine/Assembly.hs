@@ -78,6 +78,14 @@ jumpZero simm = write (JumpZero simm)
 halt :: Script
 halt = write (Halt)
 
+cmpGT :: Register -> MemoryAddress -> Script
+cmpGT rx dmemaddr =
+    write (CmpGT rx dmemaddr)
+
+jumpGT :: SImm10 -> Script
+jumpGT simm =
+    write (JumpGT simm)
+
 -- | Translate the script source code to a program --- a list of instructions
 ---  with assigned instruction addresses
 -- assemble :: Script -> Program

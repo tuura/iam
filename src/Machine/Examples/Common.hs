@@ -6,7 +6,7 @@ import Machine.State
 import Machine.Assembly
 
 r0, r1, r2, r3 :: Register
-[r0, r1, r2, r3] = [0..3]
+[r0, r1, r2, r3] = [R0, R1, R2, R3]
 
 emptyRegisters :: RegisterBank
 emptyRegisters = mkSFunArray $ const 0
