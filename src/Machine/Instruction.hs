@@ -14,11 +14,11 @@ import Machine.Types
 data Instruction = Halt
                  | Load     Register MemoryAddress
                  | LoadMI   Register MemoryAddress
-                 | Set      Register SImm8
+                 | Set      Register Byte
                  | Store    Register MemoryAddress
                  | Add      Register MemoryAddress
-                 | Jump     SImm8
-                 | JumpZero SImm8
+                 | Jump     Byte
+                 | JumpZero Byte
 
                  | AdjustVelocity Register MemoryAddress
                  | CheckOperationStatus Register MemoryAddress MemoryAddress

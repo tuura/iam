@@ -31,7 +31,7 @@ type Monad m = (Selective m, Prelude.Monad m)
 --   static code analysis.
 --
 --   Note: applicative semantics cannot interact with flags.
-semanticsF :: Instruction -> Semantics Applicative MachineKey Value ()
+semanticsF :: Instruction -> Semantics Functor MachineKey Value ()
 semanticsF Halt              = haltF
 semanticsF (Load reg addr)   = load reg addr
 semanticsF (LoadMI _ _)      = const (const Nothing)
@@ -90,13 +90,13 @@ load reg addr read write = Just $
 
 -- | Set a register value.
 --   Functor.
-setF :: Register -> SImm8 -> Semantics Functor MachineKey Value ()
+setF :: Register -> Byte -> Semantics Functor MachineKey Value ()
 setF reg simm read write = Just $
     write (Reg reg) ((const simm) <$> (read (Reg reg)))
 
 -- | Set a register value.
 --   Applicative.
-setA :: Register -> SImm8 -> Semantics Applicative MachineKey Value ()
+setA :: Register -> Byte -> Semantics Applicative MachineKey Value ()
 setA reg simm read write = Just $
     write (Reg reg) (pure simm)
 
@@ -131,7 +131,7 @@ statusCheck reg addr1 addr2 read write = Just $
 
 -- | Unconditional jump.
 --   Functor.
-jump :: SImm8 -> Semantics Functor MachineKey Value ()
+jump :: Byte -> Semantics Functor MachineKey Value ()
 jump simm read write = Just $
     write IC (fmap (+ simm) (read IC))
 
@@ -144,7 +144,7 @@ loadMI reg addr read write = Just $ do
 
 -- | Jump if 'Zero' flag is set.
 --   Selective.
-jumpZero :: SImm8 -> Semantics Selective MachineKey Value ()
+jumpZero :: Byte -> Semantics Selective MachineKey Value ()
 jumpZero simm read write = Just $
     ifS ((==) <$> read (F Zero) <*> pure 1)
         (write IC ((+) <$> read IC <*> pure simm))
