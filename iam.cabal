@@ -17,6 +17,7 @@ library
                      , Machine.Types
                      , Machine.Instruction
                      , Machine.Semantics
+                     , Machine.Assembly
                      , Machine.Semantics.Dependencies
                      , Machine.Semantics.Graph.Dataflow
                      , Machine.Semantics.Graph.PetriNet
