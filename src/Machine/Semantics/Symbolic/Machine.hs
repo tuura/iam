@@ -1,7 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 --------------------------------------------------------------------------------
 -- |
--- Module      :  Machine.Semantics
+-- Module      :  Machine.Semantics.Symbolic.Machine
 -- Copyright   :  (c) Georgy Lukyanov, Andrey Mokhov 2017
 --
 -- Maintainer  :  lukyanov.georgy@gmail.com
@@ -12,13 +12,14 @@
 -- This module contains all heavy-lifting: reading/writing memory, flags and
 -- registers, controlling the clock and program execution.
 --------------------------------------------------------------------------------
-module Machine.Semantics.Symbolic where
+module Machine.Semantics.Symbolic.Machine where
 
 import Data.Maybe (fromJust)
 import Control.Monad.State.Strict
 import Data.SBV
-import Machine.Types
-import Machine.State
+import Machine.Semantics.Symbolic.Types
+import Machine.Semantics.Symbolic.State
+import Machine.Semantics.Symbolic.Instruction
 
 -- | Iam machine is a state transformer
 newtype Machine a = Machine { runMachine :: State MachineState a }
@@ -94,7 +95,7 @@ writeRegister register value = do
 readFlag :: SBV Flag -> Machine (SBV Bool)
 readFlag flag = do
     currentState <- get
-    pure $ readArray (flags currentState) flag
+    pure $ (./= 0) $ readArray (flags currentState) flag
 
 -- | Set a given 'Flag' to the specified Boolean value.
 --   We assume that it takes 1 clock cycle to access
@@ -104,7 +105,7 @@ writeFlag flag value = do
     delay 1
     modify $ \currentState ->
         currentState {
-            flags = writeArray (flags currentState) flag value}
+            flags = writeArray (flags currentState) flag (ite value 1 0)}
 
 --------------------------------------------------------------------------------
 ------------ Program -----------------------------------------------------------
@@ -119,8 +120,8 @@ execute (Store    rX dmemaddr) = executeStore    rX dmemaddr
 execute (Add      rX dmemaddr) = executeAdd      rX dmemaddr
 execute (Jump     simm       ) = executeJump     simm
 execute (JumpZero simm       ) = executeJumpZero simm
-execute (CmpGT    rx dmemaddr) = executeCmpGT    rx dmemaddr
-execute (JumpGT   simm       ) = executeJumpGT   simm
+-- execute (CmpGT    rx dmemaddr) = executeCmpGT    rx dmemaddr
+-- execute (JumpGT   simm       ) = executeJumpGT   simm
 
 executeHalt :: Machine ()
 executeHalt = writeFlag (literal Halted) true
@@ -134,8 +135,8 @@ executeLoadMI rX dmemaddr =
     readMemory (literal dmemaddr) >>= toMemoryAddress >>=
     readMemory >>= writeRegister (literal rX)
 
-executeSet :: Register -> SImm8 -> Machine ()
-executeSet rX simm = writeRegister (literal rX) (fromSImm8 . literal $ simm)
+executeSet :: Register -> Byte -> Machine ()
+executeSet rX simm = writeRegister (literal rX) (fromByte . literal $ simm)
 
 executeStore :: Register -> MemoryAddress -> Machine ()
 executeStore rX dmemaddr = readRegister (literal rX) >>= writeMemory (literal dmemaddr)
@@ -148,32 +149,32 @@ executeAdd rX dmemaddr = do
     writeFlag (literal Zero) (z .== 0)
     writeRegister (literal rX) z
 
-executeJump :: SImm10 -> Machine ()
+executeJump :: Byte -> Machine ()
 executeJump simm =
     modify $ \currentState ->
         currentState {instructionCounter =
-            instructionCounter currentState + (fromSImm10 . literal $ simm)}
+            instructionCounter currentState + (fromByte . literal $ simm)}
 
-executeJumpZero :: SImm10 -> Machine ()
+executeJumpZero :: Byte -> Machine ()
 executeJumpZero simm = do
     zeroIsSet <- readFlag (literal Zero)
     ic <- instructionCounter <$> get
-    let ic' = ite zeroIsSet (ic + (fromSImm10 . literal $ simm)) ic
+    let ic' = ite zeroIsSet (ic + (fromByte . literal $ simm)) ic
     modify $ \currentState ->
         currentState {instructionCounter = ic'}
 
-executeCmpGT :: Register -> MemoryAddress -> Machine ()
-executeCmpGT rx dmemaddr = do
-    gt <- (.>) <$> readRegister (literal rx) <*> readMemory (literal dmemaddr)
-    writeFlag (literal Compare) gt
+-- executeCmpGT :: Register -> MemoryAddress -> Machine ()
+-- executeCmpGT rx dmemaddr = do
+--     gt <- (.>) <$> readRegister (literal rx) <*> readMemory (literal dmemaddr)
+--     writeFlag (literal Compare) gt
 
-executeJumpGT :: SImm10 -> Machine ()
-executeJumpGT simm = do
-    isGt <- readFlag (literal Compare)
-    ic <- instructionCounter <$> get
-    let ic' = ite isGt (ic + (fromSImm10 . literal $ simm)) ic
-    modify $ \currentState ->
-        currentState {instructionCounter = ic'}
+-- executeJumpGT :: Byte -> Machine ()
+-- executeJumpGT simm = do
+--     isGt <- readFlag (literal Compare)
+--     ic <- instructionCounter <$> get
+--     let ic' = ite isGt (ic + (fromByte . literal $ simm)) ic
+--     modify $ \currentState ->
+--         currentState {instructionCounter = ic'}
 --------------------------------------------------------------------------------
 
 executeInstruction :: Machine ()
@@ -192,7 +193,7 @@ fetchInstruction :: Machine ()
 fetchInstruction =
     get >>= readProgram . instructionCounter >>= writeInstructionRegister
 
-readProgram :: SBV InstructionAddress -> Machine (Instruction)
+readProgram :: SBV InstructionAddress -> Machine (SBV Instruction)
 readProgram addr = do
     currentState <- get
     delay 1
@@ -215,8 +216,6 @@ writeInstructionRegister instruction =
 
 --------------------------------------------------------------------------------
 
-fromSImm8 :: SBV SImm8 -> SBV Value
-fromSImm8 s = fromBitsLE $ blastLE s ++ replicate 56 (sTestBit s 7)
+fromByte :: SBV Byte -> SBV Value
+fromByte s = fromBitsLE $ blastLE s ++ replicate 56 (sTestBit s 7)
 
-fromSImm10 :: SBV SImm10 -> SBV InstructionAddress
-fromSImm10 s = fromBitsLE $ (take 10 $ blastLE s) ++ replicate 6 (sTestBit s 9)
