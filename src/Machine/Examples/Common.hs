@@ -21,15 +21,15 @@ initialiseMemory =
 dumpMemory :: Value -> Value -> Memory -> [SBV Value]
 dumpMemory from to m = map (readArray m) [literal from..literal to]
 
-templateState :: Script -> Memory -> MachineState
-templateState src mem = MachineState { registers = emptyRegisters
-                               , instructionCounter = 0
-                               , instructionRegister = literal $ Jump 0
-                               , program = assemble src
-                               , flags = emptyFlags
-                               , memory = mem
-                               , clock = 0
-                               }
+-- templateState :: Script -> Memory -> MachineState
+-- templateState src mem = MachineState { registers = emptyRegisters
+--                                , instructionCounter = 0
+--                                , instructionRegister = literal $ Jump 0
+--                                , program = assemble src
+--                                , flags = emptyFlags
+--                                , memory = mem
+--                                , clock = 0
+--                                }
 
 prover = z3 { verbose = True
             , redirectVerbose = Just "example.smt2"
@@ -39,3 +39,6 @@ prover = z3 { verbose = True
 
 steps :: Int
 steps = 100
+
+instructions :: Script -> [Instruction]
+instructions s = reverse $ snd $ runWriter s []

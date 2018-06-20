@@ -53,13 +53,14 @@ semanticsA (Set reg simm)    = setA reg simm
 semanticsA (Store reg addr)  = store reg addr
 semanticsA (Add reg addr)    = add reg addr
 semanticsA (Jump simm)       = jump simm
+semanticsA (JumpZero simm)   = const (const Nothing)
 semanticsA (AdjustVelocity reg addr)  = adjust reg addr
 semanticsA (CheckOperationStatus reg addr1 addr2) = statusCheck reg addr1 addr2
 
 semanticsS :: Instruction -> Semantics Selective MachineKey Value ()
 semanticsS (JumpZero simm)   = jumpZero simm
 semanticsS (LoadMI _ _)      = const (const Nothing)
-semantics i                  = semanticsA i
+semanticsS i                  = semanticsA i
 
 -- | Monadic semantics may involve data dynamic analysis and must be executed
 --   on a concrete machine state.
@@ -158,4 +159,9 @@ blockSemanticsA xs = \read write->
 blockSemanticsS :: [Instruction] -> Semantics Selective MachineKey Value ()
 blockSemanticsS xs = \read write->
     foldr (\x acc -> ((*>)) <$> acc <*> semanticsS x read write) nop xs
+    where nop = Just $ pure ()
+
+blockSemanticsM :: [Instruction] -> Semantics Monad MachineKey Value ()
+blockSemanticsM xs = \read write->
+    foldr (\x acc -> ((>>)) <$> acc <*> semanticsM x read write) nop xs
     where nop = Just $ pure ()
