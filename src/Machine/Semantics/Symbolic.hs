@@ -12,12 +12,13 @@
 --------------------------------------------------------------------------------
 module Machine.Semantics.Symbolic where
 
-import Data.SBV (SBV, literal)
+import Data.SBV (SBV, literal, mkSFunArray, writeArray)
 import Control.Monad.State (get)
 import Control.Selective (handle)
 import Metalanguage
 import AST
 import Machine.Semantics
+import Machine.Assembly
 import Machine.Semantics.Symbolic.Types
 import Machine.Semantics.Symbolic.Instruction
 import Machine.Semantics.Symbolic.State
@@ -44,3 +45,9 @@ readKey = \case
     IC        -> instructionCounter <$> get
     IR        -> error "Can't read Instruction Register" -- readInstructionRegister
     Prog addr -> error "Can't read Program" -- readProgram (literal addr)
+
+assemble :: Script -> Program
+assemble s = foldr (\(c, p) a -> writeArray a p c) a0 (zip (map literal prg) [0..])
+  where
+    a0  = mkSFunArray (const $ literal Halt)
+    prg = reverse $ snd $ runWriter s []
