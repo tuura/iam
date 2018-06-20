@@ -14,7 +14,7 @@ module Machine.Types (
     Value,
 
     -- * Signed immediate arguments
-    SImm8,
+    Byte,
 
     -- * Registers
     Register (..), RegisterBank,
@@ -30,12 +30,13 @@ module Machine.Types (
     ) where
 
 import qualified Data.Map.Strict as Map
+import Data.Word (Word64)
 
 -- | The 'Value' datatype represents data values. The precise
 -- bit-width is left unspecified, but it is assumed that it fits into 64 bits.
-type Value = Int
+type Value = Word64
 
-type SImm8 = Value
+type Byte = Value
 
 data Register = R0 | R1 | R2 | R3
     deriving (Show, Read, Eq, Ord, Enum)
@@ -51,7 +52,7 @@ type Memory = Map.Map MemoryAddress Value
 -- | Boolean 'Flag's indicate the current status of Iam.
 data Flag = Zero
           | Halted
-          deriving (Enum, Eq, Ord, Show)
+          deriving (Show, Read, Eq, Ord, Enum)
 
 type FlagId = Value
 
