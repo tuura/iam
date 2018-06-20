@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveAnyClass #-}
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Machine.Semantics.Symbolic.State
@@ -13,8 +15,8 @@ module Machine.Semantics.Symbolic.State (
     MachineState (..), templateState
     ) where
 
-import qualified Data.Map as Map
-import Data.SBV (SBV, literal, mkSFunArray, writeArray)
+import GHC.Generics (Generic)
+import Data.SBV (SBV, literal, mkSFunArray, writeArray, Mergeable)
 import Machine.Semantics.Symbolic.Types
 import Machine.Semantics.Symbolic.Instruction
 
@@ -27,7 +29,7 @@ data MachineState = MachineState
     , memory              :: Memory
     , program             :: Program
     , clock               :: SBV Clock
-    } deriving Show
+    } deriving (Show, Generic, Mergeable)
 
 emptyRegisters :: RegisterBank
 emptyRegisters = mkSFunArray $ const 0
