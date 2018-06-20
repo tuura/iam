@@ -17,13 +17,16 @@ module Machine.Semantics.Symbolic.Machine where
 import Data.Maybe (fromJust)
 import Control.Monad.State.Strict
 import Data.SBV
+import Control.Selective
 import Machine.Semantics.Symbolic.Types
 import Machine.Semantics.Symbolic.State
 import Machine.Semantics.Symbolic.Instruction
 
+instance Monad m => Selective (StateT s m) where
+
 -- | Iam machine is a state transformer
 newtype Machine a = Machine { runMachine :: State MachineState a }
-    deriving (Functor, Applicative, Monad, MonadState MachineState)
+    deriving (Functor, Applicative, Monad, MonadState MachineState, Selective)
 
 run :: Machine a -> MachineState -> (a, MachineState)
 run = runState . runMachine
@@ -63,7 +66,8 @@ readMemory address = do
 toMemoryAddress :: SBV Value -> Machine (SBV MemoryAddress)
 toMemoryAddress value = do
     let valid = value .< 256
-    return $ fromBitsLE (take 8 $ blastLE value)
+    -- return $ fromBitsLE (take 8 $ blastLE value)
+    pure value
 
 --------------------------------------------------------------------------------
 ------------ Registers ---------------------------------------------------------
@@ -92,10 +96,10 @@ writeRegister register value = do
 
 -- | Lookup the value of a given 'Flag'. If the flag is not currently assigned
 -- any value, it is assumed to be 'False'.
-readFlag :: SBV Flag -> Machine (SBV Bool)
+readFlag :: SBV Flag -> Machine (SBV Value)
 readFlag flag = do
     currentState <- get
-    pure $ (./= 0) $ readArray (flags currentState) flag
+    pure $ readArray (flags currentState) flag
 
 -- | Set a given 'Flag' to the specified Boolean value.
 --   We assume that it takes 1 clock cycle to access
@@ -157,7 +161,7 @@ executeJump simm =
 
 executeJumpZero :: Byte -> Machine ()
 executeJumpZero simm = do
-    zeroIsSet <- readFlag (literal Zero)
+    zeroIsSet <- (./= 0) <$> readFlag (literal Zero)
     ic <- instructionCounter <$> get
     let ic' = ite zeroIsSet (ic + (fromByte . literal $ simm)) ic
     modify $ \currentState ->
@@ -216,6 +220,14 @@ writeInstructionRegister instruction =
 
 --------------------------------------------------------------------------------
 
-fromByte :: SBV Byte -> SBV Value
-fromByte s = fromBitsLE $ blastLE s ++ replicate 56 (sTestBit s 7)
+-- fromByte :: SBV Byte -> SBV Value
+-- fromByte s = fromBitsLE $ blastLE s ++ replicate 56 (sTestBit s 7)
 
+fromByte :: SBV Byte -> SBV Value
+fromByte = id -- fromBitsLE $ (take 10 $ blastLE s) ++ replicate 6 (sTestBit s 9)
+
+-- fromSImm8 :: SBV SImm8 -> SBV Value
+-- fromSImm8 s = fromBitsLE $ blastLE s ++ replicate 56 (sTestBit s 7)
+
+-- fromSImm10 :: SBV SImm10 -> SBV InstructionAddress
+-- fromSImm10 s = fromBitsLE $ (take 10 $ blastLE s) ++ replicate 6 (sTestBit s 9)

@@ -15,14 +15,17 @@ library
   exposed-modules:     Metalanguage
                      , AST
                      , Machine.Types
-                     , Machine.State
                      , Machine.Instruction
                      , Machine.Semantics
                      , Machine.Semantics.Dependencies
-                     , Machine.Semantics.Simulate
                      , Machine.Semantics.Graph.Dataflow
                      , Machine.Semantics.Graph.PetriNet
                      , Machine.Semantics.Oracle
+                     , Machine.Semantics.Symbolic
+                     , Machine.Semantics.Symbolic.Machine
+                     , Machine.Semantics.Symbolic.Types
+                     , Machine.Semantics.Symbolic.Instruction
+                     , Machine.Semantics.Symbolic.State
                      , Machine.Examples.Common
   build-depends:       base >= 4.7 && < 5
                      , containers   >= 0.5.7.1
