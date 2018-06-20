@@ -13,6 +13,7 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     Metalanguage
+                     , AST
                      , Machine.Types
                      , Machine.State
                      , Machine.Instruction
