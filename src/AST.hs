@@ -12,6 +12,7 @@
 --------------------------------------------------------------------------------
 module AST where
 
+import Data.SBV
 import Control.Selective
 import Metalanguage
 import Machine.Types
@@ -19,7 +20,7 @@ import Machine.Instruction
 import Machine.Semantics
 
 data AST k v a where
-    Read   :: k -> AST k v a
+    Read   :: k -> AST k v v
     Write  :: k -> AST k v a -> AST k v ()
     Fmap   :: (a -> b) -> AST k v a -> AST k v b
     Pure   :: a -> AST k v a

@@ -24,12 +24,13 @@ import Machine.Semantics.Symbolic.Instruction
 import Machine.Semantics.Symbolic.State
 import Machine.Semantics.Symbolic.Machine
 
-buildAST :: Semantics Machine.Semantics.Monad MachineKey Value a -> Maybe (AST MachineKey Value a)
+buildAST :: Semantics Machine.Semantics.Monad MachineKey (SBV Value) a
+         -> Maybe (AST MachineKey (SBV Value) a)
 buildAST computation = computation Read Write
 
-interpretSymbolic :: AST MachineKey Value a -> Machine a
+interpretSymbolic :: AST MachineKey (SBV Value) a -> Machine a
 interpretSymbolic = \case
-    Read  k               -> undefined
+    Read  k               -> readKey k
     Write k v             -> undefined
     Fmap  func fa         -> fmap func (interpretSymbolic fa)
     Pure  x               -> pure x
