@@ -43,9 +43,8 @@ runModel steps state
 
 simulateScriptViaMetalanguage :: Script -> MachineState -> MachineState
 simulateScriptViaMetalanguage src state =
-    -- let semantics = (blockSemanticsM . instructions $ src) :: Semantics Monad MachineKey Value ()
-    -- in snd $ run (interpretSymbolic . fromJust $ buildAST semantics) state
-    snd $ run (interpretSymbolic . fromJust $ buildAST (blockSemanticsM . instructions $ src)) state
+    let ast = fromJust $ buildAST (blockSemanticsM . instructions $ src)
+    in snd $ run (interpretSymbolic ast) state
 
 --------------------------------------------------------------------------------
 sumArray :: Script
