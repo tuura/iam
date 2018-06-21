@@ -41,8 +41,8 @@ runModel steps state
     halted    = (./= 0) $ readArray (flags state) (literal Halted)
     nextState = snd $ run executeInstruction state
 
-runDaFuckingScript :: Script -> MachineState -> MachineState
-runDaFuckingScript src state =
+simulateScriptViaMetalanguage :: Script -> MachineState -> MachineState
+simulateScriptViaMetalanguage src state =
     -- let semantics = (blockSemanticsM . instructions $ src) :: Semantics Monad MachineKey Value ()
     -- in snd $ run (interpretSymbolic . fromJust $ buildAST semantics) state
     snd $ run (interpretSymbolic . fromJust $ buildAST (blockSemanticsM . instructions $ src)) state
@@ -75,8 +75,8 @@ theoremSumArray n = proveWith prover $ do
         result = readArray (registers finalState) (literal R0)
     pure $ result .== sum summands &&& clock finalState .< 10000
 
-daFuckingTheorem :: Int -> IO ThmResult
-daFuckingTheorem n = proveWith prover $ do
+metalanguageSumArrayTheorem :: Int -> IO ThmResult
+metalanguageSumArrayTheorem n = proveWith prover $ do
     summands <- mkForallVars n
     let memory = initialiseMemory $  [(0, 0)]
                                   ++ zip [1..] summands
@@ -84,6 +84,6 @@ daFuckingTheorem n = proveWith prover $ do
                                      , (254, fromIntegral n)
                                      ]
         steps = 10000
-        finalState = runDaFuckingScript sumArray (templateState (assemble sumArray) memory)
+        finalState = simulateScriptViaMetalanguage sumArray (templateState (assemble sumArray) memory)
         result = readArray (registers finalState) (literal R0)
     pure $ result .== sum summands &&& clock finalState .< 10000
