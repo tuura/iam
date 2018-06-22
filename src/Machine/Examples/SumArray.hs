@@ -1,9 +1,12 @@
 {-# LANGUAGE ConstraintKinds, RankNTypes,
              ScopedTypeVariables,
              FlexibleContexts,
-             FlexibleInstances #-}
+             FlexibleInstances,
+             TypeFamilies #-}
 module Machine.Examples.SumArray where
 
+import System.IO.Unsafe (unsafePerformIO)
+import Control.Monad.IO.Class (liftIO)
 import Data.Maybe (fromJust)
 import Prelude hiding (Monad, subtract)
 import qualified Prelude (Monad)
@@ -11,7 +14,7 @@ import Text.Pretty.Simple (pPrint)
 import Data.SBV hiding (label)
 import Control.Selective
 import Metalanguage
-import Machine.Semantics (blockSemanticsM, MachineKey)
+import Machine.SemanticsNum (blockSemanticsM, MachineKey)
 import Machine.Semantics.Symbolic
 import Machine.Semantics.Symbolic.Machine
 import Machine.Semantics.Symbolic.Types
@@ -41,9 +44,15 @@ runModel steps state
     halted    = (./= 0) $ readArray (flags state) (literal Halted)
     nextState = snd $ run executeInstruction state
 
-simulateScriptViaMetalanguage :: Script -> MachineState -> MachineState
+-- simulateScriptViaMetalanguage :: Script -> MachineState -> MachineState
+-- simulateScriptViaMetalanguage src state =
+--     let ast = fromJust $ buildAST (blockSemanticsM . instructions $ src)
+--     in snd $ run (interpretSymbolic ast) state
+
+simulateScriptViaMetalanguage :: (addr ~ byte)
+    => [Instruction (SBV Register) (SBV MemoryAddress) (SBV Flag) (SBV Byte)] -> MachineState -> MachineState
 simulateScriptViaMetalanguage src state =
-    let ast = fromJust $ buildAST (blockSemanticsM . instructions $ src)
+    let ast = fromJust $ buildAST (blockSemanticsM src)
     in snd $ run (interpretSymbolic ast) state
 
 --------------------------------------------------------------------------------
@@ -61,28 +70,65 @@ sumArray = do
     goto loop
     halt
 
-theoremSumArray :: Int -> IO ThmResult
-theoremSumArray n = proveWith prover $ do
-    summands <- mkForallVars n
-    let memory = initialiseMemory $  [(0, 0)]
-                                  ++ zip [1..] summands
-                                  ++ [ (253, -1)
-                                     , (254, fromIntegral n)
-                                     ]
-        steps = 10000
-        finalState = runModel steps $ templateState (assemble sumArray) memory
-        result = readArray (registers finalState) (literal R0)
-    pure $ result .== sum summands &&& clock finalState .< 10000
+sumArrayInstructions :: [Instruction (SBV Register) (SBV MemoryAddress) (SBV Flag) (SBV Byte)]
+sumArrayInstructions = [ Load (literal R0) 0
+                       , Load (literal R2) 254
+                       , Store (literal R2) 255
+                       , LoadMI (literal R1) 255
+                       , Store (literal R1) 254
+                       , Add (literal R0) 254
+                       , Add (literal R2) 253
+                       , JumpZero 1
+                       , Jump (-7)
+                       , Halt
+                       ]
 
-metalanguageSumArrayTheorem :: Int -> IO ThmResult
-metalanguageSumArrayTheorem n = proveWith prover $ do
-    summands <- mkForallVars n
+addInstruction :: [Instruction (SBV Register) (SBV MemoryAddress) (SBV Flag) (SBV Byte)]
+addInstruction = reverse $
+                 [ LoadMI (literal R0) 0
+                --  , Add (literal R0) 1
+                 ]
+
+theoremAdd  :: Symbolic SBool
+theoremAdd = do
+    let x = literal 1
+        y = literal 4
+    -- x <- forall "x"
+    -- y <- forall "y"
+    let mem = initialiseMemory [(0, x), (1, y)]
+        -- steps = 1000
+        finalState =
+            simulateScriptViaMetalanguage addInstruction
+                (templateState (mkSFunArray $ const (literal $ Jump 0)) mem)
+        result = readArray (registers finalState) (literal R0)
+    liftIO $ print result
+    -- liftIO $ print $ readArray (memory finalState) (literal 1)
+    pure $ result .== y
+-- theoremSumArray :: Int -> IO ThmResult
+-- theoremSumArray n = proveWith prover $ do
+--     summands <- mkForallVars n
+--     let memory = initialiseMemory $  [(0, 0)]
+--                                   ++ zip [1..] summands
+--                                   ++ [ (253, -1)
+--                                      , (254, fromIntegral n)
+--                                      ]
+--         steps = 10000
+--         finalState = runModel steps $ templateState (assemble sumArray) memory
+--         result = readArray (registers finalState) (literal R0)
+--     pure $ result .== sum summands &&& clock finalState .< 10000
+
+metalanguageSumArrayTheorem :: Int64 -> Symbolic SBool
+metalanguageSumArrayTheorem n = do
+    -- summands <- mkForallVars n
+    let summands = map literal [1..n]
     let memory = initialiseMemory $  [(0, 0)]
                                   ++ zip [1..] summands
                                   ++ [ (253, -1)
                                      , (254, fromIntegral n)
                                      ]
         steps = 10000
-        finalState = simulateScriptViaMetalanguage sumArray (templateState (assemble sumArray) memory)
+        finalState =
+            simulateScriptViaMetalanguage sumArrayInstructions (templateState (mkSFunArray $ const (literal Halt)) memory)
         result = readArray (registers finalState) (literal R0)
-    pure $ result .== sum summands &&& clock finalState .< 10000
+    liftIO $ print finalState
+    pure $ result .== sum summands -- &&& clock finalState .< 10000

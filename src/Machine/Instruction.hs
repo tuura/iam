@@ -1,6 +1,6 @@
 module Machine.Instruction (
     -- * Instruction syntax and related types
-    Instruction (..), Opcode, InstructionAddress,
+    Instruction (..), InstructionAddress,
 
     -- * Program type and program parser
     Program,
@@ -11,27 +11,22 @@ import Data.Word
 import Machine.Types
 
 -- | Iam instructions
-data Instruction = Halt
-                 | Load     Register MemoryAddress
-                 | LoadMI   Register MemoryAddress
-                 | Set      Register Byte
-                 | Store    Register MemoryAddress
-                 | Add      Register MemoryAddress
-                 | Jump     Byte
-                 | JumpZero Byte
-
-                 | AdjustVelocity Register MemoryAddress
-                 | CheckOperationStatus Register MemoryAddress MemoryAddress
+data Instruction r addr flag byte = Halt
+                                  | Load     r addr
+                                  | LoadMI   r addr
+                                  | Set      r byte
+                                  | Store    r addr
+                                  | Add      r addr
+                                  | Jump     byte
+                                  | JumpZero byte
     deriving (Show, Read, Eq, Ord)
-
-type Opcode = Word8
 
 -- | Programs are stored in program memory.
 type InstructionAddress = Value
 
 -- | The program is represented by a map from instruction addresses to
 --   instructions.
-type Program = [(InstructionAddress, Instruction)]
+type Program = [(InstructionAddress, Instruction Register MemoryAddress Flag Byte)]
 
 readProgram :: FilePath -> IO Program
 readProgram = (fmap parseProgram) . readFile

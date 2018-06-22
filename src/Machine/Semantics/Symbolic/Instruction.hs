@@ -1,4 +1,4 @@
-{-# LANGUAGE StandaloneDeriving, DeriveDataTypeable, DeriveAnyClass #-}
+{-# LANGUAGE StandaloneDeriving, DeriveDataTypeable, DeriveAnyClass, FlexibleInstances #-}
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Machine.Semantics.Symbolic.Instruction
@@ -12,23 +12,24 @@
 --------------------------------------------------------------------------------
 module Machine.Semantics.Symbolic.Instruction  (
         -- * Instruction syntax and related types
-    Plain.Instruction (..), Plain.Opcode, Plain.InstructionAddress,
+    Plain.Instruction (..), Plain.InstructionAddress,
 
     -- * Program type and program parser
     Program,
     ) where
 
-import Data.SBV (HasKind, SymWord, SFunArray)
+import Data.SBV (SBV, HasKind, SymWord, SFunArray)
 import qualified Data.Data as Data
-import Machine.Semantics.Symbolic.Types (Register (..))
+import Machine.Semantics.Symbolic.Types (Register (..), MemoryAddress, Flag, Byte)
 import qualified Machine.Instruction as Plain
 
 -- Symbolic data instances for the 'Instruction' type
-deriving instance Data.Data Plain.Instruction
-deriving instance HasKind Plain.Instruction
-deriving instance SymWord Plain.Instruction
+deriving instance Data.Data (Plain.Instruction Register MemoryAddress Flag Byte)
+deriving instance HasKind (Plain.Instruction Register MemoryAddress Flag Byte)
+deriving instance SymWord (Plain.Instruction Register MemoryAddress Flag Byte)
 
 -- | The program is represented by a map from instruction addresses to
 --   instructions.
-type Program = SFunArray Plain.InstructionAddress Plain.Instruction
+type Program = SFunArray Plain.InstructionAddress
+    (Plain.Instruction Register MemoryAddress Flag Byte)
 
