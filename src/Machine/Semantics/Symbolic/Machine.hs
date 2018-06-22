@@ -115,7 +115,7 @@ writeFlag flag value = do
 ------------ Program -----------------------------------------------------------
 --------------------------------------------------------------------------------
 
-execute :: Instruction -> Machine ()
+execute :: (Instruction Register MemoryAddress Flag Byte) -> Machine ()
 execute (Halt                ) = executeHalt
 execute (Load     rX dmemaddr) = executeLoad     rX dmemaddr
 execute (LoadMI   rX dmemaddr) = executeLoadMI   rX dmemaddr
@@ -197,13 +197,13 @@ fetchInstruction :: Machine ()
 fetchInstruction =
     get >>= readProgram . instructionCounter >>= writeInstructionRegister
 
-readProgram :: SBV InstructionAddress -> Machine (SBV Instruction)
+readProgram :: SBV InstructionAddress -> Machine (SBV (Instruction Register MemoryAddress Flag Byte))
 readProgram addr = do
     currentState <- get
     delay 1
     pure $ readArray (program currentState) addr
 
-readInstructionRegister :: Machine Instruction
+readInstructionRegister :: Machine (Instruction Register MemoryAddress Flag Byte)
 readInstructionRegister = do
     i <- unliteral . instructionRegister <$> get
     case i of
@@ -213,7 +213,7 @@ readInstructionRegister = do
 -- readInstructionRegister :: Machine (SBV Instruction)
 -- readInstructionRegister = instructionRegister <$> get
 
-writeInstructionRegister :: SBV Instruction -> Machine ()
+writeInstructionRegister :: SBV (Instruction Register MemoryAddress Flag Byte) -> Machine ()
 writeInstructionRegister instruction =
     modify $ \currentState ->
         currentState {instructionRegister = instruction}

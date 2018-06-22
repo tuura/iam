@@ -21,7 +21,7 @@ import Machine.Semantics
 
 data AST k v a where
     Read   :: k -> AST k v v
-    Write  :: k -> AST k v a -> AST k v ()
+    Write  :: k -> AST k v v -> AST k v ()
     Fmap   :: (a -> b) -> AST k v a -> AST k v b
     Pure   :: a -> AST k v a
     Star   :: AST k v (a -> b) -> AST k v a -> AST k v b

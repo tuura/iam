@@ -17,6 +17,7 @@ module Machine.Semantics.Symbolic.State (
 
 import GHC.Generics (Generic)
 import Data.SBV (SBV, literal, mkSFunArray, writeArray, Mergeable)
+import Machine.Types (Register, MemoryAddress, Flag, Byte)
 import Machine.Semantics.Symbolic.Types
 import Machine.Semantics.Symbolic.Instruction
 
@@ -24,7 +25,7 @@ import Machine.Semantics.Symbolic.Instruction
 data MachineState = MachineState
     { registers           :: RegisterBank
     , instructionCounter  :: SBV InstructionAddress
-    , instructionRegister :: SBV Instruction
+    , instructionRegister :: SBV (Instruction Register MemoryAddress Flag Byte)
     , flags               :: Flags
     , memory              :: Memory
     , program             :: Program

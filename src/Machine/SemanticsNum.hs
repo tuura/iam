@@ -1,9 +1,11 @@
 {-# LANGUAGE ConstraintKinds, RankNTypes,
              ScopedTypeVariables,
              FlexibleContexts,
-             FlexibleInstances #-}
+             FlexibleInstances,
+             TypeApplications,
+             TypeFamilies #-}
 
-module Machine.Semantics where
+module Machine.SemanticsNum where
 
 import Prelude hiding (Monad, read)
 import qualified Prelude (Monad)
@@ -13,27 +15,28 @@ import Machine.Types
 import Machine.Instruction
 import Data.List.NonEmpty
 import Control.Selective
+import Machine.Value
 
 -- | 'MachineKey' will instantiate the 'k' type variable in the 'Semantics'
 --   metalanguage.
-data MachineKey = Reg  Register
-                | Addr MemoryAddress
-                | F    Flag
-                | IC
-                | IR
-                | Prog InstructionAddress
+data MachineKey r addr flag = Reg r
+                            | Addr addr
+                            | F    flag
+                            | IC
+                            | IR
+                            | Prog InstructionAddress
     deriving (Show, Eq, Ord)
 
 type Monad m = (Selective m, Prelude.Monad m)
-
-
 
 -- | Functorial semantics is data independent and may have a most one
 --   static dependency. May be used for
 --   static code analysis.
 --
 --   Note: applicative semantics cannot interact with flags.
-semanticsF :: (Instruction Register MemoryAddress Flag Byte) -> Semantics Functor MachineKey Value ()
+semanticsF :: (Num v, Eq v, IsRegister r, IsMemoryAddress addr, IsFlag flag)
+           => Instruction r addr flag v
+           -> Semantics Functor (MachineKey r addr flag) v ()
 semanticsF Halt              = haltF
 semanticsF (Load reg addr)   = load reg addr
 semanticsF (LoadMI _ _)      = const (const Nothing)
@@ -47,7 +50,9 @@ semanticsF (JumpZero _)      = const (const Nothing)
 --   static code analysis.
 --
 --   Note: applicative semantics cannot interact with flags.
-semanticsA :: (Instruction Register MemoryAddress Flag Byte) -> Semantics Applicative MachineKey Value ()
+semanticsA :: (Num v, Eq v, IsRegister r, IsMemoryAddress addr, IsFlag flag)
+           => Instruction r addr flag v
+           -> Semantics Applicative (MachineKey r addr flag) v ()
 semanticsA Halt              = haltA
 semanticsA (Load reg addr)   = load reg addr
 semanticsA (LoadMI _ _)      = const (const Nothing)
@@ -56,10 +61,10 @@ semanticsA (Store reg addr)  = store reg addr
 semanticsA (Add reg addr)    = add reg addr
 semanticsA (Jump simm)       = jump simm
 semanticsA (JumpZero simm)   = const (const Nothing)
--- semanticsA (AdjustVelocity reg addr)  = adjust reg addr
--- semanticsA (CheckOperationStatus reg addr1 addr2) = statusCheck reg addr1 addr2
 
-semanticsS :: (Instruction Register MemoryAddress Flag Byte) -> Semantics Selective MachineKey Value ()
+semanticsS :: (Num v, Eq v, IsRegister r, IsMemoryAddress addr, IsFlag flag)
+           => Instruction r addr flag v
+           -> Semantics Selective (MachineKey r addr flag) v ()
 semanticsS (JumpZero simm)   = jumpZero simm
 semanticsS (LoadMI _ _)      = const (const Nothing)
 semanticsS i                  = semanticsA i
@@ -69,101 +74,117 @@ semanticsS i                  = semanticsA i
 --
 --   Note: Indirect memory access ('LoadMI') and conditional jump ('JumpZero')
 --   instruction may be only assigned monadic semantics.
-semanticsM :: (Instruction Register MemoryAddress Flag Byte) -> Semantics Monad MachineKey Value ()
+semanticsM :: (Num v, Eq v, IsRegister r, IsMemoryAddress addr, IsFlag flag, addr ~ v)
+           => Instruction r addr flag v
+           -> Semantics Monad (MachineKey r addr flag) v ()
 semanticsM (LoadMI reg addr) = loadMI reg addr
 semanticsM i                 = semanticsS i
 
 -- | Halt the execution.
 --   Functor.
-haltF :: Semantics Functor MachineKey Value ()
+haltF :: (IsFlag flag, Num v) => Semantics Functor (MachineKey r addr flag) v ()
 haltF read write = Just $
-    write (F Halted) ((const 1) <$> read (F Halted))
+    write (F halted) ((const 1) <$> read (F halted))
 
 -- | Halt the execution.
 --   Applicative.
-haltA :: Semantics Applicative MachineKey Value ()
+haltA :: (IsFlag flag, Num v) =>
+         Semantics Applicative (MachineKey r addr flag) v ()
 haltA read write = Just $
-    write (F Halted) (pure 1)
+    write (F halted) (pure 1)
 
 -- | Load a value from a memory location to a register.
 --   Functor.
-load :: Register -> MemoryAddress -> Semantics Functor MachineKey Value ()
+load :: (Num v, IsRegister r, IsMemoryAddress addr)
+     => r -> addr -> Semantics Functor (MachineKey r addr flag) v ()
 load reg addr read write = Just $
     write (Reg reg) (read (Addr addr))
 
 -- | Set a register value.
 --   Functor.
-setF :: Register -> Byte -> Semantics Functor MachineKey Value ()
+setF ::  (Num v, IsRegister r, IsMemoryAddress addr)
+     => r -> v -> Semantics Functor (MachineKey r addr flag) v ()
 setF reg simm read write = Just $
     write (Reg reg) ((const simm) <$> (read (Reg reg)))
 
 -- | Set a register value.
 --   Applicative.
-setA :: Register -> Byte -> Semantics Applicative MachineKey Value ()
+setA ::  (Num v, IsRegister r, IsMemoryAddress addr)
+     => r -> v -> Semantics Applicative (MachineKey r addr flag) v ()
 setA reg simm read write = Just $
     write (Reg reg) (pure simm)
 
 -- | Store a value from a register to a memory location.
 --   Functor.
-store :: Register -> MemoryAddress -> Semantics Functor MachineKey Value ()
+store ::  (Num v, IsRegister r, IsMemoryAddress addr)
+      => r -> addr -> Semantics Functor (MachineKey r addr flag) v ()
 store reg addr read write = Just $
     write (Addr addr) (read (Reg reg) )
 
 -- | Add a value from memory location to one in a register.
 --   Applicative.
-add :: Register -> MemoryAddress -> Semantics Applicative MachineKey Value ()
+add :: (Num v, Eq v, IsRegister r, IsMemoryAddress addr, IsFlag flag)
+    => r -> addr -> Semantics Applicative (MachineKey r addr flag) v ()
 add reg addr = \read write -> Just $
     let result = (+)    <$> read (Reg reg) <*> read (Addr addr)
         isZero = (== 0) <$> result
     in  write (Reg reg) result *>
-        write (F Zero)  (boolToValue <$> isZero)
+        write (F zero)  (boolToNum <$> isZero)
 
-boolToValue False = 0
-boolToValue True  = 1
+boolToNum False = 0
+boolToNum True  = 1
 
-adjust :: Register -> MemoryAddress -> Semantics Applicative MachineKey Value ()
-adjust reg addr = \read write -> Just $
-    let result = read (Addr addr) *> read (Reg reg)
-    in  write (Addr addr) result
+-- -- adjust :: Register -> MemoryAddress -> Semantics Applicative (MachineKey r addr flag) Value ()
+-- -- adjust reg addr = \read write -> Just $
+-- --     let result = read (Addr addr) *> read (Reg reg)
+-- --     in  write (Addr addr) result
 
-statusCheck :: Register -> MemoryAddress -> MemoryAddress
-            -> Semantics Applicative MachineKey Value ()
-statusCheck reg addr1 addr2 read write = Just $
-    let result = read (Addr addr1) *> read (Addr addr2)
-    in  write (Reg reg) result
+-- -- statusCheck :: Register -> MemoryAddress -> MemoryAddress
+-- --             -> Semantics Applicative (MachineKey r addr flag) Value ()
+-- -- statusCheck reg addr1 addr2 read write = Just $
+-- --     let result = read (Addr addr1) *> read (Addr addr2)
+-- --     in  write (Reg reg) result
 
 -- | Unconditional jump.
 --   Functor.
-jump :: Byte -> Semantics Functor MachineKey Value ()
+jump :: Num v => v -> Semantics Functor (MachineKey r addr flag) v ()
 jump simm read write = Just $
     write IC (fmap (+ simm) (read IC))
 
 -- | Indirect memory access.
 --   Monadic.
-loadMI :: Register -> MemoryAddress -> Semantics Monad MachineKey Value ()
+loadMI :: (Num v, IsRegister r, IsMemoryAddress addr, v ~ addr)
+       => r -> addr -> Semantics Monad (MachineKey r addr flag) v ()
 loadMI reg addr read write = Just $ do
     addr' <- read (Addr addr)
     write (Reg reg) (read (Addr addr'))
 
 -- | Jump if 'Zero' flag is set.
 --   Selective.
-jumpZero :: Byte -> Semantics Selective MachineKey Value ()
+jumpZero :: (Num v, Eq v, IsFlag flag)
+         => v -> Semantics Selective (MachineKey r addr flag) v ()
 jumpZero simm read write = Just $
-    ifS ((==) <$> read (F Zero) <*> pure 1)
+    ifS ((==) <$> read (F zero) <*> pure 1)
         (write IC ((+) <$> read IC <*> pure simm))
         (pure ())
 
-blockSemanticsA :: [(Instruction Register MemoryAddress Flag Byte)] -> Semantics Applicative MachineKey Value ()
+blockSemanticsA :: (Num v, Eq v, IsRegister r, IsMemoryAddress addr, IsFlag flag)
+                => [Instruction r addr flag v]
+                -> Semantics Applicative (MachineKey r addr flag) v ()
 blockSemanticsA xs = \read write->
     foldr (\x acc -> ((*>)) <$> acc <*> semanticsA x read write) nop xs
     where nop = Just $ pure ()
 
-blockSemanticsS :: [(Instruction Register MemoryAddress Flag Byte)] -> Semantics Selective MachineKey Value ()
+blockSemanticsS :: (Num v, Eq v, IsRegister r, IsMemoryAddress addr, IsFlag flag)
+                => [Instruction r addr flag v]
+                -> Semantics Selective (MachineKey r addr flag) v ()
 blockSemanticsS xs = \read write->
     foldr (\x acc -> ((*>)) <$> acc <*> semanticsS x read write) nop xs
     where nop = Just $ pure ()
 
-blockSemanticsM :: [(Instruction Register MemoryAddress Flag Byte)] -> Semantics Monad MachineKey Value ()
+blockSemanticsM :: (Num v, Eq v, IsRegister r, IsMemoryAddress addr, IsFlag flag, v ~ addr)
+                => [Instruction r addr flag v]
+                -> Semantics Monad (MachineKey r addr flag) v ()
 blockSemanticsM xs = \read write->
     foldr (\x acc -> ((>>)) <$> acc <*> semanticsM x read write) nop xs
     where nop = Just $ pure ()

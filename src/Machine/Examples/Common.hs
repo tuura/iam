@@ -40,5 +40,5 @@ prover = z3 { verbose = True
 steps :: Int
 steps = 100
 
-instructions :: Script -> [Instruction]
+instructions :: Script -> [(Instruction Register MemoryAddress Flag Byte)]
 instructions s = reverse $ snd $ runWriter s []

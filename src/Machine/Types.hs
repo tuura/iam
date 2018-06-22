@@ -31,10 +31,11 @@ module Machine.Types (
 
 import qualified Data.Map.Strict as Map
 import Data.Word (Word64)
+import Data.Int (Int64)
 
 -- | The 'Value' datatype represents data values. The precise
 -- bit-width is left unspecified, but it is assumed that it fits into 64 bits.
-type Value = Word64
+type Value = Int64
 
 type Byte = Value
 
