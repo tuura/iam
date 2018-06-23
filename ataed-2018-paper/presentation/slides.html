@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8">
+    <style>
+      @import url(https://fonts.googleapis.com/css?family=Yanone+Kaffeesatz);
+      @import url(https://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic);
+      @import url(https://fonts.googleapis.com/css?family=Ubuntu+Mono:400,700,400italic);
+
+           @page{
+        size: 6.27in 4.75in;
+      }
+
+      body { font-family: 'Droid Serif'; }
+      h1, h2, h3 {
+        font-family: 'Yanone Kaffeesatz';
+        font-weight: normal;
+      }
+      .remark-code, .remark-inline-code { font-family: 'Ubuntu Mono'; }
+      .title {font-size: 3.3em; font-weight:bold;letter-spacing:0.05em}
+      .subtitle {font-size: 1.4em; color:#606060}
+      .author {font-size: 1.4em; color:#606060;font-weight:bold;letter-spacing:0.02em}
+      .coauthor {font-size: 1.0em; color:#606060;font-weight:bold;letter-spacing:0.02em}
+      .institution {font-size: 1.0em;}
+      .date {font-size: 1.0em;font-style: italic}
+
+      blockquote {
+          text-align: left;
+          font: 28px italic Times, serif;
+          padding: 8px;
+          background-color: #faebbc;
+          border-top: 1px solid #e1cc89;
+          border-bottom: 1px solid #e1cc89;
+          margin: 5px;
+          background-image: url(img/openquote1.gif);
+          background-position: top left;
+          background-repeat: no-repeat;
+          text-indent: 23px;
+      }
+      blockquote span {
+          display: block;
+          background-image: url(img/closequote1.gif);
+          background-repeat: no-repeat;
+          background-position: bottom right;
+      }
+      div.hardware-info {
+        margin-top: -10px;
+        font: 16px italic Times, serif;
+      }
+
+    </style>
+  </head>
+  <body>
+    <textarea id="source">
+name: Concurrency Oracles for Free
+class: center, middle
+
+.title[{{name}}]
+
+.subtitle[Making the best out of ISA semantics]
+<br>
+<br>
+<br>
+.author[Georgy Lukyanov, Andrey Mokhov]
+<br>
+.institution[School of Engineering, Newcastle University, United Kingdom]
+<br>
+<br>
+<br>
+<br>
+<br>
+.center[[{g.lukyanov2@newcastle.ac.uk}](g.lukyanov2@newcastle.ac.uk)]
+
+.date[June 25, 2018]
+
+---
+
+name: Agenda
+
+## {{name}}
+
+1. Introduction: executable  specifications for instruction set architectures
+2. State transformer-like polymorphic semantics
+3. Extracting concurrency oracles
+    * Oracle 1: Dependency matcher
+    * Oracle 2: Static Data Dependency Graph
+    * Oracle 3: Partial Orders and CPOGs
+4. Synthesis of efficient hardware microcontrollers
+5. Conclusion
+
+???
+
+Concurrency oracles here are these three things:
+
+1. Static data dependency graphs (original and unfolded).
+2. The origin oracle from the paper: one that detects read, write and read-write
+conflicts.
+3. Partial Orders and the CPOG synthesised representation.
+
+Deciding whether two given events in a trace are concurrent, i.e. have no causal
+or data dependencies between them, is a major problem in the process discov-
+ery field [3]. Various methods for concurrency extraction, often referred to as
+concurrency oracles
+
+---
+class: center, middle
+.title[Introduction]
+
+.subtitle[Executable specifications for instruction set architectures]
+---
+class: center
+# Executable ISA specification
+
+.center[<img style="margin-top:-0.7em;margin-bottom:-0.8em"  src="./img/executable-isa.svg">]
+---
+
+```
+read  :: Key -> f Value
+write :: Key -> f Value -> f ()
+```
+---
+## Load
+
+```
+load reg addr = \read write -> Just $
+    write (Register reg) (read (Address addr))
+```
+
+## Jump
+
+```
+jump offset = \read write -> Just $
+    write IC ((+ offset) <$> (read IC))
+```
+
+## Add
+
+```
+add reg addr = \read write -> Just $
+    let result = (+) <$> read (Reg reg) <*> read (Addr addr)
+        isZero = (== 0) <$> result
+    in  write (Reg reg) result *>
+        write (Flag Zero) (boolToValue <$> isZero)
+```
+
+???
+
+Make here two columns with the graphs from the papers on the right.
+
+---
+class: center
+# Executable ISA specification
+
+.center[<img style="margin-top:-0.7em;margin-bottom:-0.8em"  src="./img/executable-isa-faded.svg">]
+
+---
+name: Synthesis of efficient hardware microcontrollers
+class: center, middle
+.title[{{name}}]
+---
+class: center, middle
+
+.center[<img style="width:85%;margin-top:-0.7em;margin-bottom:-0.8em"  src="./img/ataed-circuit.svg">]
+    </textarea>
+    <script src="https://remarkjs.com/downloads/remark-latest.min.js">
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS_HTML&delayStartupUntil=configured" type="text/javascript"></script>
+    <script>
+      var slideshow = remark.create({highlightLines: true,
+                                     highlightLanguage: 'haskell'});
+      // Setup MathJax
+      MathJax.Hub.Config({
+          tex2jax: {
+            inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+          }
+      });
+
+      MathJax.Hub.Configured();
+    </script>
+  </body>
+</html>
