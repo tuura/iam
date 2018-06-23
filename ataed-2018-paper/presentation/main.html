@@ -3,7 +3,7 @@ class: center, middle
 
 .title[{{name}}]
 
-.subtitle[Concurrency analysis of instruction set architecture semantics]
+.subtitle[Making the best out of ISA semantics]
 <br>
 <br>
 <br>
@@ -25,12 +25,24 @@ name: Agenda
 
 ## {{name}}
 
-1. Introduction and motivation
-2. Instruction set architecture semantics
-3. Polymorphic computational metalanguage
-4. Concurrency oracles
+1. Introduction: executable  specifications for instruction set architectures
+2. State transformer-like polymorphic semantics
+3. Extracting concurrency oracles
+    * Oracle 1: Dependency matcher
+    * Oracle 2: Static Data Dependency Graph
+    * Oracle 3: Partial Orders and CPOGs
 4. Synthesis of efficient hardware microcontrollers
 5. Conclusion
+
+???
+
+Concurrency oracles here are these three things:
+
+1. Static data dependency graphs (original and unfolded).
+2. The origin oracle from the paper: one that detects read, write and read-write
+conflicts.
+3. Partial Orders and the CPOG synthesised representation.
+
 ---
 
 name: Introduction
