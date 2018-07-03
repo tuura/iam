@@ -24,11 +24,12 @@ import Machine.Semantics.Symbolic.Instruction
 import Machine.Semantics.Symbolic.State
 import Machine.Semantics.Symbolic.Machine
 
-buildAST :: Semantics Machine.SemanticsNum.Monad (MachineKey r addr flag) v a
-         -> Maybe (AST (MachineKey r addr flag) v a)
+buildAST :: Semantics Machine.SemanticsNum.Monad ( MachineKey r addr iaddr flag) v a
+         -> Maybe (AST ( MachineKey r addr iaddr flag) v a)
 buildAST computation = computation Read Write
 
-interpretSymbolic :: AST (MachineKey (SBV Register) (SBV MemoryAddress) (SBV Flag)) (SBV Value) a
+interpretSymbolic :: AST (MachineKey (SBV Register) (SBV MemoryAddress)
+                                     (SBV InstructionAddress) (SBV Flag)) (SBV Value) a
                   -> Machine a
 interpretSymbolic = \case
     Read  k               -> readKey k
@@ -39,7 +40,7 @@ interpretSymbolic = \case
     Handle choice handler -> handle (interpretSymbolic choice) (interpretSymbolic handler)
     Bind  a f             -> (interpretSymbolic a) >>= (\x -> interpretSymbolic (f x))
 
-readKey :: MachineKey (SBV Register) (SBV MemoryAddress) (SBV Flag) -> Machine (SBV Value)
+readKey :: MachineKey (SBV Register) (SBV MemoryAddress) (SBV InstructionAddress) (SBV Flag) -> Machine (SBV Value)
 readKey = \case
     Reg  reg  -> readRegister reg
     Addr addr -> readMemory   addr
@@ -50,7 +51,7 @@ readKey = \case
     -- IR        -> readInstructionRegister
     -- Prog addr -> readProgram (literal addr)
 
-writeKey :: MachineKey (SBV Register) (SBV MemoryAddress) (SBV Flag)
+writeKey :: MachineKey (SBV Register) (SBV MemoryAddress) (SBV InstructionAddress) (SBV Flag)
          -> Machine (SBV Value) -> Machine ()
 writeKey k v = case k of
     Reg  reg  -> v >>= writeRegister reg

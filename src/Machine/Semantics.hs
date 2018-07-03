@@ -26,8 +26,6 @@ data MachineKey = Reg  Register
 
 type Monad m = (Selective m, Prelude.Monad m)
 
-
-
 -- | Functorial semantics is data independent and may have a most one
 --   static dependency. May be used for
 --   static code analysis.
