@@ -10,11 +10,11 @@ module Machine.SemanticsNum where
 import Prelude hiding (Monad, read)
 import qualified Prelude (Monad)
 import Data.Maybe (fromJust)
-import Data.Bits
 import Control.Monad (join)
 import Metalanguage
 import Machine.Types
 import Machine.Instruction
+import Machine.Semantics.Decode
 -- import Data.List.NonEmpty
 import Control.Selective
 import Machine.Value
@@ -206,21 +206,3 @@ pipeline = \read write -> Just $ do
     i <- read IR
     fromJust $ semanticsM (decode i) read write
 
-decode :: (Num v, Eq v, IsRegister r, IsMemoryAddress addr, IsFlag flag)
-       => v -> Instruction r addr flag byte
-decode = undefined
-
-blastLE :: (Num a, FiniteBits a) => a -> [Bool]
-blastLE x = map (testBit x) [0 .. finiteBitSize x - 1]
-
-fromBitsLE :: (Num a, FiniteBits a) => [Bool] -> a
-fromBitsLE bs
-    | length bs /= w
-        = error $ "IAM.fromBitsLE: Expected: " ++ show w ++ " bits, received: " ++ show (length bs)
-    | True
-        = result
-    where w = finiteBitSize result
-          result = go 0 0 bs
-
-          go acc _  []    = acc
-          go acc i (x:xs) = go (if x then (setBit acc i) else acc) (i+1) xs
