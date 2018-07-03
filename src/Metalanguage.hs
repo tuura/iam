@@ -1,5 +1,6 @@
 {-# LANGUAGE ConstraintKinds,
-             RankNTypes #-}
+             RankNTypes,
+             FlexibleInstances #-}
 
 module Metalanguage (
     Semantics
@@ -23,4 +24,3 @@ module Metalanguage (
 type Semantics c k v a = forall f. c f => (k -> f v) ->
                                           (k -> f v -> f ()) ->
                                           Maybe (f a)
-

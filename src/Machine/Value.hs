@@ -3,6 +3,7 @@ module Machine.Value where
 
 import Data.SBV (SBV, literal)
 import Machine.Types
+import Machine.Instruction (InstructionAddress)
 import Machine.Semantics.Symbolic.Types
 
 class IsRegister a where
@@ -14,6 +15,11 @@ class IsMemoryAddress a where
 
 instance IsMemoryAddress MemoryAddress where
 instance IsMemoryAddress (SBV MemoryAddress) where
+
+class IsInstructionAddress a where
+
+instance IsInstructionAddress (InstructionAddress) where
+instance IsInstructionAddress (SBV InstructionAddress) where
 
 class IsFlag a where
     zero   :: a
