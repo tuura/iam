@@ -14,7 +14,8 @@ import Control.Monad (join)
 import Metalanguage
 import Machine.Types
 import Machine.Instruction
-import Machine.Semantics.Decode
+import Machine.Instruction.Encode
+import Machine.Instruction.Decode
 -- import Data.List.NonEmpty
 import Control.Selective
 import Machine.Value
@@ -151,7 +152,7 @@ boolToNum True  = 1
 --   Functor.
 jump :: Num v => v -> Semantics Functor (MachineKey r addr iaddr flag) v ()
 jump simm read write = Just $
-    write IC (fmap (+ simm) (read IC))
+    write IC (fmap (const simm) (read IC)) -- (fmap (+ simm) (read IC))
 
 -- | Indirect memory access.
 --   Monadic.
@@ -193,10 +194,15 @@ blockSemanticsM xs = \read write->
 
 --------------------------------------------------------------------------------
 
-pipeline :: (Num v, Eq v, IsRegister r, IsMemoryAddress addr
-            , IsInstructionAddress iaddr, IsFlag flag, addr ~ v, iaddr ~ v)
+executeInstruction :: (Num v, Eq v, MachineBits v, IsByte v, IsBool (BoolType v)
+            , Eq (BoolType v)
+            , IsInstructionCode code
+            , IsRegister r, Eq r
+            , IsMemoryAddress addr
+            , IsInstructionAddress iaddr
+            , IsFlag flag, addr ~ v, iaddr ~ v, code ~ v)
          => Semantics Monad (MachineKey r addr iaddr flag) v ()
-pipeline = \read write -> Just $ do
+executeInstruction = \read write -> Just $ do
     -- fetch instruction
     ic <- read IC
     write IR (read (Prog ic))

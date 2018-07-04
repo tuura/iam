@@ -24,6 +24,9 @@ import Machine.Semantics.Symbolic.Instruction
 import Machine.Semantics.Symbolic.State
 import Machine.Semantics.Symbolic.Machine
 
+import Machine.Instruction.Encode
+import Machine.Instruction.Decode
+
 buildAST :: Semantics Machine.SemanticsNum.Monad ( MachineKey r addr iaddr flag) v a
          -> Maybe (AST ( MachineKey r addr iaddr flag) v a)
 buildAST computation = computation Read Write
@@ -47,9 +50,9 @@ readKey = \case
     F    flag -> readFlag     flag
     IC        -> instructionCounter <$> get
     -- IR        -> error "Can't read Instruction Register" -- readInstructionRegister
-    -- Prog addr -> error "Can't read Program" -- readProgram (literal addr)
-    -- IR        -> readInstructionRegister
-    -- Prog addr -> readProgram (literal addr)
+    Prog addr -> error "Can't read Program" -- readProgram (literal addr)
+    IR        -> literal . encode <$> readInstructionRegister
+    -- Prog addr -> encode <$> readProgram (literal addr)
 
 writeKey :: MachineKey (SBV Register) (SBV MemoryAddress) (SBV InstructionAddress) (SBV Flag)
          -> Machine (SBV Value) -> Machine ()
@@ -60,11 +63,11 @@ writeKey k v = case k of
     IC        -> do
         ic' <- v
         modify $ \currentState -> currentState {instructionCounter = ic'}
-    -- IR        -> error "Can't write Instruction Register" -- readInstructionRegister
-    -- Prog addr -> error "Can't write Program" -- readProgram (literal addr)
+    IR        -> (decode <$> v) >>= writeInstructionRegister -- error "Can't write Instruction Register" -- readInstructionRegister
+    Prog addr -> error "Can't write Program" -- readProgram (literal addr)
 
--- assemble :: Script -> Program
--- assemble s = foldr (\(c, p) a -> writeArray a p c) a0 (zip (map literal prg) [0..])
---   where
---     a0  = mkSFunArray (const $ literal Halt)
---     prg = reverse $ snd $ runWriter s []
+assemble :: [Instruction Register MemoryAddress Flag Byte] -> Program
+assemble s = foldr (\(c, p) a -> writeArray a p c) a0 (zip (map literal prg) [0..])
+  where
+    a0  = mkSFunArray (const $ literal Halt)
+    prg = reverse $ s

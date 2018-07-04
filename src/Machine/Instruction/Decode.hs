@@ -10,8 +10,6 @@ import Data.Word (Word16)
 import qualified Data.SBV as SBV
 import Data.Maybe (fromJust)
 
-import Machine.Instruction.Encode
-
 decode :: ( IsRegister r, Eq r
           , IsMemoryAddress addr, MachineBits addr
           , IsInstructionCode code, Num code
