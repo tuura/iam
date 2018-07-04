@@ -1,6 +1,6 @@
 module Machine.Instruction (
     -- * Instruction syntax and related types
-    Instruction (..), InstructionAddress,
+    Instruction (..), InstructionAddress, InstructionCode,
 
     -- * Program type and program parser
     Program,
@@ -23,6 +23,9 @@ data Instruction r addr flag byte = Halt
 
 -- | Programs are stored in program memory.
 type InstructionAddress = Value
+
+-- | Binary representation of an instruction
+type InstructionCode = Value
 
 -- | The program is represented by a map from instruction addresses to
 --   instructions.

@@ -1,4 +1,4 @@
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE LambdaCase, TypeFamilies, FlexibleContexts #-}
 module Machine.Instruction.Encode where
 
 -- Decode the instruction AST from an enstruction code
@@ -8,42 +8,54 @@ import Machine.Types
 import Machine.Instruction
 import Machine.Value
 import Data.Word (Word16)
+import qualified Data.SBV as SBV
+import Data.Maybe (fromJust)
 
-type InstructionCode = Word16
-
-
-
-encode :: (Instruction Register addr flag byte) -> InstructionCode
+encode :: ( IsRegister r, Eq r
+          , IsMemoryAddress addr, MachineBits addr
+          , IsInstructionCode code, Num code
+          , IsByte byte
+          , code ~ addr, code ~ byte
+          , IsBool (BoolType addr)
+          )
+       => Instruction r addr flag byte -> code
 encode = \case
     Halt -> 0
-    Load r addr -> fromBitsLE $ [f, f, f, f, f, f, f, t] ++ encodeRegister r
-    where
-        f = False
-        t = True
--- -- | Get the instruction opcode (6 bits) and place to the
--- opcode :: Instruction -> InstructionCode
+    Load     r addr -> fromBitsLE $ [f, f, f, f, f, t] ++ encodeRegister r
+                                                       ++ encodeMemoryAddress addr
+                                                       ++ pad 48
+    LoadMI   r addr -> fromBitsLE $ [f, f, f, f, t, f] ++ encodeRegister r
+                                                       ++ encodeMemoryAddress addr
+                                                       ++ pad 48
+    Set      r byte -> fromBitsLE $ [f, f, f, f, t, t] ++ encodeRegister r
+                                                       ++ encodeByte byte
+                                                       ++ pad 48
+    Store    r addr -> fromBitsLE $ [f, f, f, t, f, f] ++ encodeRegister r
+                                                       ++ encodeMemoryAddress addr
+                                                       ++ pad 48
+    Add      r addr -> fromBitsLE $ [f, f, f, t, f, t] ++ encodeRegister r
+                                                       ++ encodeMemoryAddress addr
+                                                       ++ pad 48
+    Jump     byte   -> fromBitsLE $ [f, f, f, t, t, f] ++ encodeByte byte
+                                                       ++ pad 50
+    JumpZero byte   -> fromBitsLE $ [f, f, f, t, t, t] ++ encodeByte byte
+                                                       ++ pad 50
+    where f = false
+          t = true
+          pad k = replicate k false
 
-encodeRegister :: Register -> [Bool]
-encodeRegister R0 = [False, False]
-encodeRegister R1 = [False, True]
-encodeRegister R2 = [True, False]
-encodeRegister R3 = [True, True]
+-- | 'Register' is encoded as a 2-bit word
+encodeRegister :: (Eq r, IsRegister r, IsBool b) => r -> [b]
+encodeRegister r | r == r0 = [false, false]
+                 | r == r1 = [false, true]
+                 | r == r2 = [true, false]
+                 | r == r3 = [true, true]
 
-encodeMemoryAddress :: MemoryAddress -> [Bool]
-encodeMemoryAddress = error "Not implemented"
+-- | 'MemoryAddress' is stored in the leading 8 bits (little-endian) of a 'Value'
+encodeMemoryAddress :: (IsMemoryAddress addr, MachineBits addr) => addr -> [BoolType addr]
+encodeMemoryAddress = take 8 . blastLE
 
-encodeByte :: Byte -> [Bool]
-encodeByte = error "Not emplemented"
-
+-- | 'Byte' is stored in the leading 8 bits (little-endian) of a 'Value'
+encodeByte :: (IsByte b, MachineBits b) => b -> [BoolType b]
+encodeByte = take 8 . blastLE
 --------------------------------------------------------------------------------
-fromBitsLE :: (Num a, FiniteBits a) => [Bool] -> a
-fromBitsLE bs
-    | length bs /= w
-        = error $ "IAM.fromBitsLE: Expected: " ++ show w ++ " bits, received: " ++ show (length bs)
-    | True
-        = result
-    where w = finiteBitSize result
-          result = go 0 0 bs
-
-          go acc _  []    = acc
-          go acc i (x:xs) = go (if x then (setBit acc i) else acc) (i+1) xs
