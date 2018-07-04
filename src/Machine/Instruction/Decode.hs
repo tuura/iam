@@ -1,48 +1,68 @@
+{-# LANGUAGE LambdaCase, MultiWayIf, TypeFamilies, FlexibleContexts #-}
 module Machine.Instruction.Decode where
 
--- Decode the instruction AST from an enstruction code
-
+import Data.SBV (SBV)
 import Data.Bits
 import Machine.Types
 import Machine.Instruction
 import Machine.Value
+import Data.Word (Word16)
+import qualified Data.SBV as SBV
+import Data.Maybe (fromJust)
 
-decode :: (Num v, Eq v, IsRegister r, IsMemoryAddress addr, IsFlag flag)
-       => v -> Instruction r addr flag byte
-decode = undefined
+import Machine.Instruction.Encode
 
-type InstructionCode = Value
+decode :: ( IsRegister r, Eq r
+          , IsMemoryAddress addr, MachineBits addr
+          , IsInstructionCode code, Num code
+          , IsByte byte
+          , code ~ addr, code ~ byte
+          , IsBool (BoolType addr), Eq (BoolType addr)
+          )
+       => code -> Instruction r addr flag byte
+decode code =
+    let expandedCode = blastLE code
+        opcode = take 6 expandedCode
+    in if | opcode == [false, false, false, false, false, false] -> Halt
+          | opcode == [false, false, false, false, false, true]  ->
+                Load (decodeRegister . extractRegister $ expandedCode)
+                     (fromBitsLE $ extractMemoryAddress expandedCode)
+          | opcode == [false, false, false, false, true, false]   ->
+                LoadMI (decodeRegister . extractRegister $ expandedCode)
+                       (fromBitsLE $ extractMemoryAddress expandedCode)
+          | opcode == [false, false, false, false, true, true]  ->
+                Set (decodeRegister . extractRegister $ expandedCode)
+                    (fromBitsLE $ extractByte expandedCode)
+          | opcode == [false, false, false, true, false, false]   ->
+                Store (decodeRegister . extractRegister $ expandedCode)
+                      (fromBitsLE $ extractMemoryAddress expandedCode)
+          | opcode == [false, false, false, true, false, true]   ->
+                Add (decodeRegister . extractRegister $ expandedCode)
+                    (fromBitsLE $ extractMemoryAddress expandedCode)
+          | opcode == [false, false, false, true, true, false]   ->
+                Jump (fromBitsLE $ extractByteJump expandedCode)
+          | opcode == [false, false, false, true, true, true]    ->
+                JumpZero (fromBitsLE $ extractByteJump expandedCode)
 
-type Opcode = Value
+decodeRegister :: (IsRegister r, IsBool b, Eq b) => [b] -> r
+decodeRegister code | code == [false, false] = r0
+                    | code == [false, true]  = r1
+                    | code == [true, false]  = r2
+                    | code == [true, true]   = r3
 
-type RegisterCode = Value
+decodeOpcode :: IsBool b => [b] -> [b]
+decodeOpcode = take 6
 
-pad :: Int -> [Bool]
-pad k = replicate k False
+extractRegister = take 2 . drop 6
 
-decodeOpcode :: InstructionCode -> Opcode
-decodeOpcode c = fromBitsLE $ (drop 10 $ blastLE c) ++ pad 2
+extractMemoryAddress :: IsBool b => [b] -> [b]
+extractMemoryAddress = (++ pad 56) . take 8 . drop 8
 
-decodeRegister :: InstructionCode -> RegisterCode
-decodeRegister c = fromBitsLE $ (take 2 $ drop 8 $ blastLE c) ++ pad 6
+extractByte :: IsBool b => [b] -> [b]
+extractByte = (++ pad 56) . take 8 . drop 8
 
-decodeMemoryAddress :: InstructionCode -> MemoryAddress
-decodeMemoryAddress c = fromBitsLE $ (take 8 $ blastLE c)
+extractByteJump :: IsBool b => [b] -> [b]
+extractByteJump = (++ pad 56) . take 8 . drop 6
 
-decodeByte :: InstructionCode -> Byte
-decodeByte c = fromBitsLE $ (take 8 $ blastLE c)
---------------------------------------------------------------------------------
-blastLE :: (Num a, FiniteBits a) => a -> [Bool]
-blastLE x = map (testBit x) [0 .. finiteBitSize x - 1]
-
-fromBitsLE :: (Num a, FiniteBits a) => [Bool] -> a
-fromBitsLE bs
-    | length bs /= w
-        = error $ "IAM.fromBitsLE: Expected: " ++ show w ++ " bits, received: " ++ show (length bs)
-    | True
-        = result
-    where w = finiteBitSize result
-          result = go 0 0 bs
-
-          go acc _  []    = acc
-          go acc i (x:xs) = go (if x then (setBit acc i) else acc) (i+1) xs
+pad :: IsBool b => Int -> [b]
+pad k = replicate k false
