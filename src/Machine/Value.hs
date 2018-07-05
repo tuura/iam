@@ -97,3 +97,16 @@ fromBitsLEImpl bs
 
           go acc _  []    = acc
           go acc i (x:xs) = go (if x then (setBit acc i) else acc) (i+1) xs
+--------------------------------------------------------------------------------
+
+class ToValue a where
+    toValue :: a -> Value
+
+class FromValue a where
+    fromValue :: Value -> a
+
+instance ToValue InstructionCode where
+    toValue addr = fromBitsLEImpl $ blastLEImpl addr ++ replicate 48 false
+
+instance FromValue InstructionCode where
+    fromValue addr = fromBitsLEImpl . take 16 $ blastLEImpl addr

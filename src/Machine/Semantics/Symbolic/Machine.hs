@@ -20,7 +20,8 @@ import Data.SBV
 import Control.Selective
 import Machine.Semantics.Symbolic.Types
 import Machine.Semantics.Symbolic.State
-import Machine.Semantics.Symbolic.Instruction
+import Machine.Instruction
+import Machine.Value (toValue, fromValue)
 
 instance Monad m => Selective (StateT s m) where
 
@@ -104,89 +105,16 @@ readFlag flag = do
 -- | Set a given 'Flag' to the specified Boolean value.
 --   We assume that it takes 1 clock cycle to access
 --   the flag register in hardware.
-writeFlag :: SBV Flag -> (SBV Bool) -> Machine ()
+writeFlag :: SBV Flag -> (SBV Value) -> Machine ()
 writeFlag flag value = do
     delay 1
     modify $ \currentState ->
         currentState {
-            flags = writeArray (flags currentState) flag (ite value 1 0)}
+            flags = writeArray (flags currentState) flag value}
 
 --------------------------------------------------------------------------------
 ------------ Program -----------------------------------------------------------
 --------------------------------------------------------------------------------
-
-execute :: (Instruction Register MemoryAddress Flag Byte) -> Machine ()
-execute (Halt                ) = executeHalt
-execute (Load     rX dmemaddr) = executeLoad     rX dmemaddr
-execute (LoadMI   rX dmemaddr) = executeLoadMI   rX dmemaddr
-execute (Set      rX simm    ) = executeSet      rX simm
-execute (Store    rX dmemaddr) = executeStore    rX dmemaddr
-execute (Add      rX dmemaddr) = executeAdd      rX dmemaddr
-execute (Jump     simm       ) = executeJump     simm
-execute (JumpZero simm       ) = executeJumpZero simm
--- execute (CmpGT    rx dmemaddr) = executeCmpGT    rx dmemaddr
--- execute (JumpGT   simm       ) = executeJumpGT   simm
-
-executeHalt :: Machine ()
-executeHalt = writeFlag (literal Halted) true
-
-executeLoad :: Register -> MemoryAddress -> Machine ()
-executeLoad rX dmemaddr = readMemory (literal dmemaddr) >>=
-                          writeRegister (literal rX)
-
-executeLoadMI :: Register -> MemoryAddress -> Machine ()
-executeLoadMI rX dmemaddr =
-    readMemory (literal dmemaddr) >>= toMemoryAddress >>=
-    readMemory >>= writeRegister (literal rX)
-
-executeSet :: Register -> Byte -> Machine ()
-executeSet rX simm = writeRegister (literal rX) (fromByte . literal $ simm)
-
-executeStore :: Register -> MemoryAddress -> Machine ()
-executeStore rX dmemaddr = readRegister (literal rX) >>= writeMemory (literal dmemaddr)
-
-executeAdd :: Register -> MemoryAddress -> Machine ()
-executeAdd rX dmemaddr = do
-    x <- readRegister (literal rX)
-    y <- readMemory (literal dmemaddr)
-    let z = x + y
-    writeFlag (literal Zero) (z .== 0)
-    writeRegister (literal rX) z
-
-executeJump :: Byte -> Machine ()
-executeJump simm =
-    modify $ \currentState ->
-        currentState {instructionCounter =
-            instructionCounter currentState + (fromByte . literal $ simm)}
-
-executeJumpZero :: Byte -> Machine ()
-executeJumpZero simm = do
-    zeroIsSet <- (./= 0) <$> readFlag (literal Zero)
-    ic <- instructionCounter <$> get
-    let ic' = ite zeroIsSet (ic + (fromByte . literal $ simm)) ic
-    modify $ \currentState ->
-        currentState {instructionCounter = ic'}
-
--- executeCmpGT :: Register -> MemoryAddress -> Machine ()
--- executeCmpGT rx dmemaddr = do
---     gt <- (.>) <$> readRegister (literal rx) <*> readMemory (literal dmemaddr)
---     writeFlag (literal Compare) gt
-
--- executeJumpGT :: Byte -> Machine ()
--- executeJumpGT simm = do
---     isGt <- readFlag (literal Compare)
---     ic <- instructionCounter <$> get
---     let ic' = ite isGt (ic + (fromByte . literal $ simm)) ic
---     modify $ \currentState ->
---         currentState {instructionCounter = ic'}
---------------------------------------------------------------------------------
-
-executeInstruction :: Machine ()
-executeInstruction = do
-    fetchInstruction
-    incrementInstructionCounter
-    execute =<< readInstructionRegister
-
 -- | Increment the instruction counter.
 incrementInstructionCounter :: Machine ()
 incrementInstructionCounter =
@@ -197,37 +125,16 @@ fetchInstruction :: Machine ()
 fetchInstruction =
     get >>= readProgram . instructionCounter >>= writeInstructionRegister
 
-readProgram :: SBV InstructionAddress -> Machine (SBV (Instruction Register MemoryAddress Flag Byte))
+readProgram :: SBV InstructionAddress -> Machine (SBV InstructionCode)
 readProgram addr = do
     currentState <- get
     delay 1
     pure $ readArray (program currentState) addr
 
-readInstructionRegister :: Machine (Instruction Register MemoryAddress Flag Byte)
-readInstructionRegister = do
-    i <- unliteral . instructionRegister <$> get
-    case i of
-        Just i  -> pure i
-        Nothing -> error "Error: InstructionRegister became symbolic."
+readInstructionRegister :: Machine (SBV InstructionCode)
+readInstructionRegister = instructionRegister <$> get
 
--- readInstructionRegister :: Machine (SBV Instruction)
--- readInstructionRegister = instructionRegister <$> get
-
-writeInstructionRegister :: SBV (Instruction Register MemoryAddress Flag Byte) -> Machine ()
+writeInstructionRegister :: SBV (InstructionCode) -> Machine ()
 writeInstructionRegister instruction =
     modify $ \currentState ->
         currentState {instructionRegister = instruction}
-
---------------------------------------------------------------------------------
-
--- fromByte :: SBV Byte -> SBV Value
--- fromByte s = fromBitsLE $ blastLE s ++ replicate 56 (sTestBit s 7)
-
-fromByte :: SBV Byte -> SBV Value
-fromByte = id -- fromBitsLE $ (take 10 $ blastLE s) ++ replicate 6 (sTestBit s 9)
-
--- fromSImm8 :: SBV SImm8 -> SBV Value
--- fromSImm8 s = fromBitsLE $ blastLE s ++ replicate 56 (sTestBit s 7)
-
--- fromSImm10 :: SBV SImm10 -> SBV InstructionAddress
--- fromSImm10 s = fromBitsLE $ (take 10 $ blastLE s) ++ replicate 6 (sTestBit s 9)

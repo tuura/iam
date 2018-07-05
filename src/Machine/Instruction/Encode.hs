@@ -13,7 +13,7 @@ import Data.Maybe (fromJust)
 
 encode :: ( IsRegister r, Eq r
           , IsMemoryAddress addr, MachineBits addr
-          , IsInstructionCode code, Num code
+          , Num code
           , IsByte byte
           , code ~ addr, code ~ byte
           , IsBool (BoolType addr)

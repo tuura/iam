@@ -1,10 +1,6 @@
 module Machine.Instruction (
     -- * Instruction syntax and related types
-    Instruction (..), InstructionAddress, InstructionCode,
-
-    -- * Program type and program parser
-    Program,
-    parseProgram, readProgram
+    Instruction (..), InstructionAddress, InstructionCode
     ) where
 
 import Data.Word
@@ -25,23 +21,5 @@ data Instruction r addr flag byte = Halt
 type InstructionAddress = Value
 
 -- | Binary representation of an instruction
-type InstructionCode = Value
+type InstructionCode = Value -- Word16
 
--- | The program is represented by a map from instruction addresses to
---   instructions.
-type Program = [(InstructionAddress, Instruction Register MemoryAddress Flag Byte)]
-
-readProgram :: FilePath -> IO Program
-readProgram = (fmap parseProgram) . readFile
-
--- | Quick-and-dirty program parser.
---
---   Comments start with the '#' character.
---
---   Blank lines are ignored.
-parseProgram :: String -> Program
-parseProgram = addInstructionAddresses . map read
-             . removeBlankLines . removeComments . lines
-    where removeComments = map (takeWhile (/= '#'))
-          removeBlankLines = filter (not . null)
-          addInstructionAddresses = zip [0..]
