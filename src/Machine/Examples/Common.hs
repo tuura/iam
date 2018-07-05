@@ -3,9 +3,9 @@ module Machine.Examples.Common where
 import Data.SBV
 import Machine.Semantics.Symbolic
 import Machine.Semantics.Symbolic.Types
-import Machine.Semantics.Symbolic.Instruction
 import Machine.Semantics.Symbolic.State
 import Machine.Semantics.Symbolic.Machine
+import Machine.Instruction
 import Machine.Assembly
 
 emptyRegisters :: RegisterBank

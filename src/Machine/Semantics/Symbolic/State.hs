@@ -19,13 +19,12 @@ import GHC.Generics (Generic)
 import Data.SBV (SBV, literal, mkSFunArray, writeArray, Mergeable)
 import Machine.Types (Register, MemoryAddress, Flag, Byte)
 import Machine.Semantics.Symbolic.Types
-import Machine.Semantics.Symbolic.Instruction
 
 -- | The state of a Iam machine
 data MachineState = MachineState
     { registers           :: RegisterBank
     , instructionCounter  :: SBV InstructionAddress
-    , instructionRegister :: SBV (Instruction Register MemoryAddress Flag Byte)
+    , instructionRegister :: SBV (InstructionCode)
     , flags               :: Flags
     , memory              :: Memory
     , program             :: Program
@@ -45,7 +44,7 @@ initialiseMemory =
 templateState :: Program -> Memory -> MachineState
 templateState prog mem = MachineState { registers = emptyRegisters
                                       , instructionCounter = 0
-                                      , instructionRegister = literal $ Jump 0
+                                      , instructionRegister = literal 0
                                       , program = prog
                                       , flags = emptyFlags
                                       , memory = mem
