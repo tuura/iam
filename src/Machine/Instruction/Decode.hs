@@ -1,7 +1,7 @@
 {-# LANGUAGE LambdaCase, MultiWayIf, TypeFamilies, FlexibleContexts #-}
 module Machine.Instruction.Decode where
 
-import Data.SBV (SBV)
+import Data.SBV (SBV, Boolean (..))
 import Data.Bits
 import Machine.Types
 import Machine.Instruction
@@ -15,7 +15,7 @@ decode :: ( IsRegister r, Eq r
           , Num code
           , IsByte byte
           , code ~ addr, code ~ byte
-          , IsBool (BoolType addr), Eq (BoolType addr)
+          , Boolean (BoolType addr), Eq (BoolType addr)
           )
        => code -> Instruction r addr flag byte
 decode code =
@@ -55,25 +55,25 @@ decode code =
       where f = false
             t = true
 
-decodeRegister :: (IsRegister r, IsBool b, Eq b) => [b] -> r
+decodeRegister :: (IsRegister r, Boolean b, Eq b) => [b] -> r
 decodeRegister code | code == [false, false] = r0
                     | code == [false, true]  = r1
                     | code == [true, false]  = r2
                     | code == [true, true]   = r3
 
-decodeOpcode :: IsBool b => [b] -> [b]
+decodeOpcode :: Boolean b => [b] -> [b]
 decodeOpcode = take 6
 
 extractRegister = take 2 . drop 6
 
-extractMemoryAddress :: IsBool b => [b] -> [b]
+extractMemoryAddress :: Boolean b => [b] -> [b]
 extractMemoryAddress = (++ pad 56) . take 8 . drop 8
 
-extractByte :: IsBool b => [b] -> [b]
+extractByte :: Boolean b => [b] -> [b]
 extractByte = (++ pad 56) . take 8 . drop 8
 
-extractByteJump :: IsBool b => [b] -> [b]
+extractByteJump :: Boolean b => [b] -> [b]
 extractByteJump = (++ pad 56) . take 8 . drop 6
 
-pad :: IsBool b => Int -> [b]
+pad :: Boolean b => Int -> [b]
 pad k = replicate k false

@@ -46,14 +46,14 @@ energyEstimateLowLevel =
 
 theoremEnergyEstimate :: Int -> Symbolic SBool
 theoremEnergyEstimate steps = do
-    t1 <- forall "t1"
-    t2 <- forall "t2"
-    p1 <- forall "p1"
-    p2 <- forall "p2"
-    -- let t1 = 234
-    -- let t2 = 53
-    -- let p1 = 6
-    -- let p2 = 8
+    -- t1 <- forall "t1"
+    -- t2 <- forall "t2"
+    -- p1 <- forall "p1"
+    -- p2 <- forall "p2"
+    let t1 = 234
+    let t2 = 53
+    let p1 = 6
+    let p2 = 8
     -- let t1 = 5190405167614263295
     -- let t2 = 5190405167614263295
     -- let p1 = 149927859193384455

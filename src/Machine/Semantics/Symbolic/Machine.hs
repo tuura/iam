@@ -27,10 +27,29 @@ instance Monad m => Selective (StateT s m) where
 
 -- | Iam machine is a state transformer
 newtype Machine a = Machine { runMachine :: State MachineState a }
-    deriving (Functor, Applicative, Monad, MonadState MachineState, Selective)
+    deriving (Functor, Applicative, Monad, MonadState MachineState) -- , Selective)
 
 run :: Machine a -> MachineState -> (a, MachineState)
 run = runState . runMachine
+
+instance Selective Machine where
+    handle mx mf = do
+        x <- mx
+        case x of
+            Left  a -> fmap ($a) mf
+            Right b -> pure b
+
+
+
+-- class Applicative f => Selective f where
+--     handle :: f (Either a b) -> f (a -> b) -> f b
+--     default handle :: Monad f => f (Either a b) -> f (a -> b) -> f b
+--     handle = handleM
+
+-- instance Semigroup e => Selective (Validation e) where
+--     handle (Success (Right b)) _ = Success b
+--     handle (Success (Left  a)) f = Success ($a) <*> f
+--     handle (Failure e        ) _ = Failure e
 
 --------------------------------------------------------------------------------
 ------------ Clock -------------------------------------------------------------

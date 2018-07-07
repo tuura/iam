@@ -13,9 +13,9 @@
 module Machine.Value where
 
 import Control.Selective
-import Data.SBV (SBV, SBool, literal, SFiniteBits, sFiniteBitSize)
 import qualified Data.SBV as SBV (true, false, blastLE, fromBitsLE
                                  , (&&&), (|||), (.<), (.>), (.==), ite)
+import Data.SBV (SBV, SBool, literal, SFiniteBits, sFiniteBitSize, Boolean (..))
 import Data.Bits
 import Machine.Types
 import Machine.Instruction (InstructionAddress, InstructionCode)
@@ -70,21 +70,21 @@ instance IsFlag (SBV Flag) where
     overflow = literal Overflow
     halted   = literal Halted
 
-class IsBool a where
-    true, false :: a
-    and, or :: a -> a -> a
+-- class IsBool a where
+--     true, false :: a
+--     and, or :: a -> a -> a
 
-instance IsBool Bool where
-    true  = True
-    false = False
-    and = (&&)
-    or  = (||)
+-- instance IsBool Bool where
+--     true  = True
+--     false = False
+--     and = (&&)
+--     or  = (||)
 
-instance IsBool SBool where
-    true  = SBV.true
-    false = SBV.false
-    and = (SBV.&&&)
-    or  = (SBV.|||)
+-- instance IsBool SBool where
+--     true  = SBV.true
+--     false = SBV.false
+--     and = (SBV.&&&)
+--     or  = (SBV.|||)
 --------------------------------------------------------------------------------
 type family BoolType a where
     BoolType Value = Bool
@@ -154,21 +154,25 @@ instance MachineOrd (SBV Value) where
     lt = (SBV..<)
 
 class ITE a where
-    ite :: IsBool b => b -> a -> a -> a
+    ite :: (BoolType a) -> a -> a -> a
 
-instance ITE (Value) where
-    ite cond t f = if cond then t else f
+instance ITE Value where
+    ite i t e = if i then t else e
 
 instance ITE (SBV Value) where
-    ite cond t f = SBV.ite cond t f
+    ite = SBV.ite
 
 -- | Branch on a Boolean value, skipping unnecessary effects.
-ifS' :: (Selective f, IsBool b, ITE a) => f b -> f a -> f a -> f a
-ifS' i t e = ite <$> i <*> t <*> e
-    -- select (bool' (Right ()) (Left ()) <$> i) (const <$> t) (const <$> e)
+-- ifS' :: (Selective f, Boolean b) => f b -> f a -> f a -> f a
+-- ifS' i t e = undefined -- select (bool' (Right ()) (Left ()) <$> i) (const <$> t) (const <$> e)
 
--- bool' :: (IsBool b, MachineEq b) => a -> a -> b -> a
--- bool' f t cond = undefined
+ifS' :: (Selective f, Boolean b) => f b -> f a -> f a -> f a
+ifS' i t e = undefined -- select (bool' (Right ()) (Left ()) <$> i) (const <$> t) (const <$> e)
+
+-- bool' :: (Boolean (BoolType a), ITE a) => a -> a -> (BoolType a) -> a
+-- -- bool' f t cond | cond == false = f
+-- --                | cond == true  = t
+-- bool' f t cond = ite cond t f
 --------------------------------------------------------------------------------
 
 class ToValue a where

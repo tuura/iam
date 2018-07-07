@@ -10,13 +10,14 @@ import Machine.Value
 import Data.Word (Word16)
 import qualified Data.SBV as SBV
 import Data.Maybe (fromJust)
+import Data.SBV (Boolean (..))
 
 encode :: ( IsRegister r, Eq r
           , IsMemoryAddress addr, MachineBits addr
           , Num code
           , IsByte byte
           , code ~ addr, code ~ byte
-          , IsBool (BoolType addr)
+          , Boolean (BoolType addr)
           )
        => Instruction r addr flag byte -> code
 encode = \case
@@ -56,7 +57,7 @@ encode = \case
           pad k = replicate k false
 
 -- | 'Register' is encoded as a 2-bit word
-encodeRegister :: (Eq r, IsRegister r, IsBool b) => r -> [b]
+encodeRegister :: (Eq r, IsRegister r, Boolean b) => r -> [b]
 encodeRegister r | r == r0 = [false, false]
                  | r == r1 = [false, true]
                  | r == r2 = [true, false]
