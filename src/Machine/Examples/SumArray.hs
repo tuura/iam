@@ -73,5 +73,5 @@ theoremSumArray steps n = do
     -- liftIO $ print (readArray (registers finalState) (literal R0))
     -- liftIO $ putStrLn $ "Zero: " ++ show (readArray (flags finalState) (literal Zero))
     -- liftIO $ putStrLn $ "Mem 3: " ++ show (readArray (memory finalState) (literal 3))
-    -- liftIO $ pPrint finalState
+    liftIO $ pPrint finalState
     pure $ result .== sum summands -- &&& clock finalState .< 10000

@@ -40,6 +40,17 @@ encode = \case
                                                        ++ pad 50
     JumpZero byte   -> fromBitsLE $ [f, f, f, t, t, t] ++ encodeByte byte
                                                        ++ pad 50
+    Sub      r addr -> fromBitsLE $ [f, f, t, f, f, f] ++ encodeRegister r
+                                                       ++ encodeMemoryAddress addr
+                                                       ++ pad 48
+    Mul      r addr -> fromBitsLE $ [f, f, t, f, f, t] ++ encodeRegister r
+                                                       ++ encodeMemoryAddress addr
+                                                       ++ pad 48
+    Div      r addr -> fromBitsLE $ [f, f, t, f, t, f] ++ encodeRegister r
+                                                       ++ encodeMemoryAddress addr
+                                                       ++ pad 48
+    Abs      r      -> fromBitsLE $ [f, f, t, f, t, t] ++ encodeRegister r
+                                                       ++ pad 56
     where f = false
           t = true
           pad k = replicate k false
