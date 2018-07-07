@@ -15,6 +15,10 @@ data Instruction r addr flag byte = Halt
                                   | Add      r addr
                                   | Jump     byte
                                   | JumpZero byte
+                                  | Sub      r addr
+                                  | Mul      r addr
+                                  | Div      r addr
+                                  | Abs      r
     deriving (Show, Read, Eq, Ord)
 
 -- | Programs are stored in program memory.

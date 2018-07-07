@@ -54,6 +54,7 @@ type Memory = Map.Map MemoryAddress Value
 
 -- | Boolean 'Flag's indicate the current status of Iam.
 data Flag = Zero
+          | Overflow
           | Halted
           deriving (Show, Read, Eq, Ord, Enum)
 

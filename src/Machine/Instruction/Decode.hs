@@ -21,26 +21,39 @@ decode :: ( IsRegister r, Eq r
 decode code =
     let expandedCode = blastLE code
         opcode = take 6 expandedCode
-    in if | opcode == [false, false, false, false, false, false] -> Halt
-          | opcode == [false, false, false, false, false, true]  ->
+    in if | opcode == [f, f, f, f, f, f] -> Halt
+          | opcode == [f, f, f, f, f, t]  ->
                 Load (decodeRegister . extractRegister $ expandedCode)
                      (fromBitsLE $ extractMemoryAddress expandedCode)
-          | opcode == [false, false, false, false, true, false]   ->
+          | opcode == [f, f, f, f, t, f]   ->
                 LoadMI (decodeRegister . extractRegister $ expandedCode)
                        (fromBitsLE $ extractMemoryAddress expandedCode)
-          | opcode == [false, false, false, false, true, true]  ->
+          | opcode == [f, f, f, f, t, t]  ->
                 Set (decodeRegister . extractRegister $ expandedCode)
                     (fromBitsLE $ extractByte expandedCode)
-          | opcode == [false, false, false, true, false, false]   ->
+          | opcode == [f, f, f, t, f, f]   ->
                 Store (decodeRegister . extractRegister $ expandedCode)
                       (fromBitsLE $ extractMemoryAddress expandedCode)
-          | opcode == [false, false, false, true, false, true]   ->
+          | opcode == [f, f, f, t, f, t]   ->
                 Add (decodeRegister . extractRegister $ expandedCode)
                     (fromBitsLE $ extractMemoryAddress expandedCode)
-          | opcode == [false, false, false, true, true, false]   ->
+          | opcode == [f, f, f, t, t, f]   ->
                 Jump (fromBitsLE $ extractByteJump expandedCode)
-          | opcode == [false, false, false, true, true, true]    ->
+          | opcode == [f, f, f, t, t, t]    ->
                 JumpZero (fromBitsLE $ extractByteJump expandedCode)
+          | opcode == [f, f, t, f, f, f]   ->
+                Sub (decodeRegister . extractRegister $ expandedCode)
+                    (fromBitsLE $ extractMemoryAddress expandedCode)
+          | opcode == [f, f, t, f, f, t]   ->
+                Mul (decodeRegister . extractRegister $ expandedCode)
+                    (fromBitsLE $ extractMemoryAddress expandedCode)
+          | opcode == [f, f, t, f, t, f]   ->
+                Div (decodeRegister . extractRegister $ expandedCode)
+                    (fromBitsLE $ extractMemoryAddress expandedCode)
+          | opcode == [f, f, t, f, t, t]   ->
+                Abs (decodeRegister . extractRegister $ expandedCode)
+      where f = false
+            t = true
 
 decodeRegister :: (IsRegister r, IsBool b, Eq b) => [b] -> r
 decodeRegister code | code == [false, false] = r0

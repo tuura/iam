@@ -81,11 +81,3 @@ jumpZero simm = write (JumpZero simm)
 -- | Stop the machine operation
 halt :: Script
 halt = write (Halt)
-
--- cmpGT :: Register -> MemoryAddress -> Script
--- cmpGT rx dmemaddr =
---     write (CmpGT rx dmemaddr)
-
--- jumpGT :: Byte -> Script
--- jumpGT simm =
---     write (JumpGT simm)

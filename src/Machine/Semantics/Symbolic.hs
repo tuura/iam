@@ -1,4 +1,5 @@
-{-# LANGUAGE RankNTypes, GADTs, LambdaCase #-}
+{-# LANGUAGE FlexibleInstances, RankNTypes, GADTs, LambdaCase #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Machine.Semantics.Symbolic
@@ -70,3 +71,16 @@ assemble s = foldr (\(c, p) a -> writeArray a p c) a0 (zip (map literal prg) [0.
   where
     a0  = mkSFunArray (const $ literal 0)
     prg = map encode $ s
+
+-- An alternative to defining these orphan instances is to switch to SBV's type
+-- class SDivisible instead. Even better is to fix Haskell's class hierarchy.
+instance Integral (SBV Int64) where
+    div       = sDiv
+    quotRem   = error "quotRem is not implemented for SBV Int64"
+    toInteger = error "quotRem cannot be implemented for SBV Int64"
+
+instance Ord (SBV Int64) where
+    compare = error "Ord cannot be implemented for SBV Int64"
+
+instance Real (SBV Int64) where
+    toRational = error "Real cannot be implemented for SBV Int64"
