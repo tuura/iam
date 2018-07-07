@@ -12,6 +12,7 @@ import Prelude hiding (Monad, read, div, abs, and, or)
 import qualified Prelude (Monad, div, abs)
 import Data.Maybe (fromJust)
 import Control.Monad (join)
+import Data.SBV (Boolean (..))
 import Metalanguage
 import Machine.Types
 import Machine.Instruction
@@ -47,7 +48,7 @@ semanticsF :: ( IsRegister r, Eq r
               , Num code
               , IsByte byte
               , code ~ addr, code ~ byte
-              , IsBool (BoolType addr), Eq (BoolType addr)
+              , Boolean (BoolType addr), Eq (BoolType addr)
               , IsFlag flag
               , Num v , MachineBits v
               , (BoolType v) ~ (BoolType byte)
@@ -84,7 +85,7 @@ semanticsA :: ( IsRegister r, Eq r
               , Num code
               , IsByte byte
               , code ~ addr, code ~ byte
-              , IsBool (BoolType addr), Eq (BoolType addr)
+              , Boolean (BoolType addr), Eq (BoolType addr)
               , IsFlag flag
               , Integral v , Eq v, MachineBits v
               , (BoolType v) ~ (BoolType byte)
@@ -129,7 +130,7 @@ semanticsS :: ( IsRegister r, Eq r
               , Num code
               , IsByte byte
               , code ~ addr, code ~ byte
-              , IsBool (BoolType addr), Eq (BoolType addr)
+              , Boolean (BoolType addr), Eq (BoolType addr)
               , IsFlag flag
               , Integral v , Eq v, Bounded v, MachineBits v, MachineOrd v
               , (BoolType v) ~ (BoolType byte)
@@ -155,7 +156,7 @@ semanticsM :: ( IsRegister r, Eq r
               , Num code
               , IsByte byte
               , code ~ addr, code ~ byte
-              , IsBool (BoolType addr), Eq (BoolType addr)
+              , Boolean (BoolType addr), Eq (BoolType addr)
               , IsFlag flag
               , Integral v , Eq v, Bounded v, MachineBits v, MachineOrd v
               , (BoolType v) ~ (BoolType byte)
@@ -223,7 +224,7 @@ add reg addr = \read write -> Just $
 -- | Add a value from memory location to one in a register. Tracks overflow.
 --   Selective.
 addS :: ( Num v, Bounded v, Eq v, MachineOrd v
-        , IsBool (BoolType v), Eq (BoolType v)
+        , Boolean (BoolType v), Eq (BoolType v)
         , IsRegister r, IsMemoryAddress addr, IsFlag flag)
      => r -> addr -> Semantics Selective (MachineKey r addr iaddr flag) v ()
 addS reg addr = \read write -> Just $
@@ -234,12 +235,12 @@ addS reg addr = \read write -> Just $
         o2 = gt <$> arg1 <*> ((-) <$> pure maxBound <*> arg2)
         o3 = lt <$> arg2 <*> pure 0
         o4 = lt <$> arg1 <*> ((-) <$> pure minBound <*> arg2)
-        o  = or <$> (and <$> o1 <*> o2)
-                <*> (and <$> o3 <*> o4)
+        o  = (|||) <$> ((&&&) <$> o1 <*> o2)
+                   <*> ((&&&) <$> o3 <*> o4)
     in
         ifS' o (write (F overflow) (pure 1)) (pure ())
-        -- *>
-        -- write (Reg reg) result
+        *>
+        write (Reg reg) result
 
     -- ifS ((==) <$> read (F zero) <*> pure 0)
     --     (write IC $ pure simm)
@@ -332,7 +333,7 @@ jumpZero simm read write = Just $
         (write IC $ read IC)
 --------------------------------------------------------------------------------
 executeInstruction :: (Integral v, Eq v, Bounded v, MachineBits v, MachineOrd v
-            , IsByte v, IsBool (BoolType v)
+            , IsByte v, Boolean (BoolType v)
             , Eq (BoolType v)
             , IsInstructionCode code
             , IsRegister r, Eq r
