@@ -19,8 +19,8 @@ import Machine.Instruction
 
 -- | An assembly writer monad.
 newtype Writer a = Writer {
-    runWriter :: [(Instruction Register MemoryAddress Flag Byte)]
-              -> (a, [(Instruction Register MemoryAddress Flag Byte)])
+    runWriter :: [Instruction]
+              -> (a, [Instruction])
     }
     deriving Functor
 
@@ -34,7 +34,7 @@ instance Monad Writer where
     return a       = Writer (\p -> (a, p))
     Writer w >>= f = Writer (\p -> let (a, p') = w p in runWriter (f a) p')
 
-write :: (Instruction Register MemoryAddress Flag Byte) -> Script
+write :: Instruction -> Script
 write i = Writer (\p -> ((), i:p))
 
 newtype Label = Label Int

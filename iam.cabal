@@ -16,17 +16,11 @@ library
                      , AST
                      , Machine.Types
                      , Machine.Instruction
-                     , Machine.Semantics
                      , Machine.Assembly
+                     , Machine.Semantics
+                     , Machine.Semantics.Simulate
                      , Machine.Semantics.Dependencies
-                     , Machine.Semantics.Graph.Dataflow
-                     , Machine.Semantics.Graph.PetriNet
                      , Machine.Semantics.Oracle
-                     , Machine.Semantics.Symbolic
-                     , Machine.Semantics.Symbolic.Machine
-                     , Machine.Semantics.Symbolic.Types
-                     , Machine.Semantics.Symbolic.Instruction
-                     , Machine.Semantics.Symbolic.State
                      , Machine.Examples.Common
   build-depends:       base >= 4.7 && < 5
                      , containers   >= 0.5.7.1

@@ -41,7 +41,8 @@ packages:
 # (e.g., acme-missiles-0.3)
 extra-deps:
 - github: snowleopard/selective
-  commit: 8f7335ba349920d995ba43ea800974598ee6cef8
+  commit: ab5858976f67d01d36c162490ab04251cf875b64
+- build-1.0
 
 # Override default flag values for local packages and extra-deps
 flags: {}

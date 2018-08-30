@@ -7,18 +7,18 @@ import Data.Word
 import Machine.Types
 
 -- | Iam instructions
-data Instruction r addr flag byte = Halt
-                                  | Load     r addr
-                                  | LoadMI   r addr
-                                  | Set      r byte
-                                  | Store    r addr
-                                  | Add      r addr
-                                  | Jump     byte
-                                  | JumpZero byte
-                                  | Sub      r addr
-                                  | Mul      r addr
-                                  | Div      r addr
-                                  | Abs      r
+data Instruction = Halt
+                 | Load     Register MemoryAddress
+                 | LoadMI   Register MemoryAddress
+                 | Set      Register Byte
+                 | Store    Register MemoryAddress
+                 | Add      Register MemoryAddress
+                 | Jump     Byte
+                 | JumpZero Byte
+                 | Sub      Register MemoryAddress
+                 | Mul      Register MemoryAddress
+                 | Div      Register MemoryAddress
+                 | Abs      Register
     deriving (Show, Read, Eq, Ord)
 
 -- | Programs are stored in program memory.
