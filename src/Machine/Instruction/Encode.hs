@@ -6,20 +6,12 @@ module Machine.Instruction.Encode where
 import Data.Bits
 import Machine.Types
 import Machine.Instruction
-import Machine.Value
 import Data.Word (Word16)
 import qualified Data.SBV as SBV
 import Data.Maybe (fromJust)
 import Data.SBV (Boolean (..))
 
-encode :: ( IsRegister r, Eq r
-          , IsMemoryAddress addr, MachineBits addr
-          , Num code
-          , IsByte byte
-          , code ~ addr, code ~ byte
-          , Boolean (BoolType addr)
-          )
-       => Instruction r addr flag byte -> code
+encode :: Instruction -> InstructionCode
 encode = \case
     Halt -> 0
     Load     r addr -> fromBitsLE $ [f, f, f, f, f, t] ++ encodeRegister r
@@ -57,17 +49,17 @@ encode = \case
           pad k = replicate k false
 
 -- | 'Register' is encoded as a 2-bit word
-encodeRegister :: (Eq r, IsRegister r, Boolean b) => r -> [b]
-encodeRegister r | r == r0 = [false, false]
-                 | r == r1 = [false, true]
-                 | r == r2 = [true, false]
-                 | r == r3 = [true, true]
+encodeRegister :: Register -> [Bool]
+encodeRegister r | r == R0 = [false, false]
+                 | r == R1 = [false, true]
+                 | r == R2 = [true, false]
+                 | r == R3 = [true, true]
 
 -- | 'MemoryAddress' is stored in the leading 8 bits (little-endian) of a 'Value'
-encodeMemoryAddress :: (IsMemoryAddress addr, MachineBits addr) => addr -> [BoolType addr]
+encodeMemoryAddress :: MemoryAddress -> [Bool]
 encodeMemoryAddress = take 8 . blastLE
 
 -- | 'Byte' is stored in the leading 8 bits (little-endian) of a 'Value'
-encodeByte :: (IsByte b, MachineBits b) => b -> [BoolType b]
+encodeByte :: Byte -> [Bool]
 encodeByte = take 8 . blastLE
 --------------------------------------------------------------------------------

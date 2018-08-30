@@ -19,8 +19,6 @@ import Machine.Instruction
 import Machine.Instruction.Encode
 import Machine.Instruction.Decode
 import Control.Selective
-import Machine.Value
-import Data.Bifunctor
 
 -- | 'MachineKey' will instantiate the 'k' type variable in the 'Semantics'
 --   metalanguage.
@@ -28,12 +26,12 @@ import Data.Bifunctor
 -- 'addr' is the memory address type
 -- 'iaddr' is the instruction address type
 -- 'flag' is the flag type
-data MachineKey r addr iaddr flag = Reg r      -- register
-                                  | Addr addr  -- memory address
-                                  | F    flag  -- flag
-                                  | IC         -- instruction counter
-                                  | IR         -- instruction register
-                                  | Prog iaddr -- program memory address
+data MachineKey = Reg Register      -- register
+                | Addr MemoryAddress  -- memory address
+                | F    Flag  -- flag
+                | IC         -- instruction counter
+                | IR         -- instruction register
+                | Prog InstructionAddress -- program memory address
     deriving (Show, Eq, Ord)
 
 -- | We amend the standard 'Monad' constraint to include 'Selective' into
@@ -43,17 +41,7 @@ type Monad m = (Selective m, Prelude.Monad m)
 -- | Functorial semantics is data independent and may have a most one
 --   static dependency. May be used for
 --   static analysis.
-semanticsF :: ( IsRegister r, Eq r
-              , IsMemoryAddress addr, MachineBits addr
-              , Num code
-              , IsByte byte
-              , code ~ addr, code ~ byte
-              , Boolean (BoolType addr), Eq (BoolType addr)
-              , IsFlag flag
-              , Num v , MachineBits v
-              , (BoolType v) ~ (BoolType byte)
-              )
-       => code -> Semantics Functor (MachineKey r addr iaddr flag) v ()
+semanticsF :: InstructionCode -> Semantics Functor MachineKey Value ()
 semanticsF code =
     let expandedCode = blastLE code
         opcode = take 6 expandedCode
@@ -80,17 +68,7 @@ semanticsF code =
 --   static code analysis.
 --
 --   Note: applicative semantics cannot interact with flags.
-semanticsA :: ( IsRegister r, Eq r
-              , IsMemoryAddress addr, MachineBits addr
-              , Num code
-              , IsByte byte
-              , code ~ addr, code ~ byte
-              , Boolean (BoolType addr), Eq (BoolType addr)
-              , IsFlag flag
-              , Integral v , Eq v, MachineBits v
-              , (BoolType v) ~ (BoolType byte)
-              )
-       => code -> Semantics Applicative (MachineKey r addr iaddr flag) v ()
+semanticsA :: InstructionCode -> Semantics Applicative MachineKey Value ()
 semanticsA code =
     let expandedCode = blastLE code
         opcode = take 6 expandedCode
@@ -125,17 +103,7 @@ semanticsA code =
           | opcode == [false, false, true, false, true, true]    ->
                 abs (decodeRegister . extractRegister $ expandedCode)
 
-semanticsS :: ( IsRegister r, Eq r
-              , IsMemoryAddress addr, MachineBits addr
-              , Num code
-              , IsByte byte
-              , code ~ addr, code ~ byte
-              , Boolean (BoolType addr), Eq (BoolType addr)
-              , IsFlag flag
-              , Integral v , Eq v, Bounded v, MachineBits v, MachineOrd v
-              , (BoolType v) ~ (BoolType byte)
-              )
-           => code -> Semantics Selective (MachineKey r addr iaddr flag) v ()
+semanticsS :: InstructionCode -> Semantics Selective MachineKey Value ()
 semanticsS code =
     let expandedCode = blastLE code
         opcode = take 6 expandedCode
@@ -151,18 +119,7 @@ semanticsS code =
 --
 --   Note: Indirect memory access ('LoadMI') and conditional jump ('JumpZero')
 --   instruction may be only assigned monadic semantics.
-semanticsM :: ( IsRegister r, Eq r
-              , IsMemoryAddress addr, MachineBits addr
-              , Num code
-              , IsByte byte
-              , code ~ addr, code ~ byte
-              , Boolean (BoolType addr), Eq (BoolType addr)
-              , IsFlag flag
-              , Integral v , Eq v, Bounded v, MachineBits v, MachineOrd v
-              , (BoolType v) ~ (BoolType byte)
-              , v ~ byte
-              )
-           => code -> Semantics Monad (MachineKey r addr iaddr flag) v ()
+semanticsM :: InstructionCode -> Semantics Monad MachineKey Value ()
 semanticsM code =
     let expandedCode = blastLE code
         opcode = take 6 expandedCode
@@ -173,76 +130,80 @@ semanticsM code =
 
 -- | Halt the execution.
 --   Functor.
-haltF :: (IsFlag flag, Num v) => Semantics Functor (MachineKey r addr iaddr flag) v ()
+haltF :: Semantics Functor MachineKey Value ()
 haltF read write = Just $
-    write (F halted) ((const 1) <$> read (F halted))
+    write (F Halted) ((const 1) <$> read (F Halted))
 
 -- | Halt the execution.
 --   Applicative.
-haltA :: (IsFlag flag, Num v) =>
-         Semantics Applicative (MachineKey r addr iaddr flag) v ()
+haltA :: Semantics Applicative MachineKey Value ()
 haltA read write = Just $
-    write (F halted) (pure 1)
+    write (F Halted) (pure 1)
 
 -- | Load a value from a memory location to a register.
 --   Functor.
-load :: (Num v, IsRegister r, IsMemoryAddress addr)
-     => r -> addr -> Semantics Functor (MachineKey r addr iaddr flag) v ()
+load :: Register -> MemoryAddress -> Semantics Functor MachineKey Value ()
 load reg addr read write = Just $
     write (Reg reg) (read (Addr addr))
 
 -- | Set a register value.
 --   Functor.
-setF ::  (Num v, IsRegister r, IsMemoryAddress addr)
-     => r -> v -> Semantics Functor (MachineKey r addr iaddr flag) v ()
+setF :: Register -> Byte -> Semantics Functor MachineKey Value ()
 setF reg simm read write = Just $
     write (Reg reg) ((const simm) <$> (read (Reg reg)))
 
 -- | Set a register value.
 --   Applicative.
-setA ::  (Num v, IsRegister r, IsMemoryAddress addr)
-     => r -> v -> Semantics Applicative (MachineKey r addr iaddr flag) v ()
+setA :: Register -> Byte -> Semantics Applicative MachineKey Value ()
 setA reg simm read write = Just $
     write (Reg reg) (pure simm)
 
 -- | Store a value from a register to a memory location.
 --   Functor.
-store ::  (Num v, IsRegister r, IsMemoryAddress addr)
-      => r -> addr -> Semantics Functor (MachineKey r addr iaddr flag) v ()
+store :: Register -> MemoryAddress -> Semantics Functor MachineKey Value ()
 store reg addr read write = Just $
     write (Addr addr) (read (Reg reg) )
 
 -- | Add a value from memory location to one in a register.
 --   Applicative.
-add :: (Num v, Eq v, IsRegister r, IsMemoryAddress addr, IsFlag flag)
-     => r -> addr -> Semantics Applicative (MachineKey r addr iaddr flag) v ()
+add :: Register -> MemoryAddress -> Semantics Applicative MachineKey Value ()
 add reg addr = \read write -> Just $
     let result = (+) <$> read (Reg reg) <*> read (Addr addr)
-    in  write (F zero)  result *>
+    in  write (F Zero)  result *>
         write (Reg reg) result
 
 -- | Add a value from memory location to one in a register. Tracks overflow.
 --   Selective.
-addS :: ( Num v, Bounded v, Eq v, MachineOrd v
-        , Boolean (BoolType v), Eq (BoolType v)
-        , IsRegister r, IsMemoryAddress addr, IsFlag flag)
-     => r -> addr -> Semantics Selective (MachineKey r addr iaddr flag) v ()
+addS :: Register -> MemoryAddress -> Semantics Selective MachineKey Value ()
 addS reg addr = \read write -> Just $
     let arg1   = read (Reg reg)
         arg2   = read (Addr addr)
         result = (+) <$> arg1 <*> arg2
-        o1 = gt <$> arg2 <*> pure 0
-        o2 = gt <$> arg1 <*> ((-) <$> pure maxBound <*> arg2)
-        o3 = lt <$> arg2 <*> pure 0
-        o4 = lt <$> arg1 <*> ((-) <$> pure minBound <*> arg2)
+        o1 = (>) <$> arg2 <*> pure 0
+        o2 = (>) <$> arg1 <*> ((-) <$> pure maxBound <*> arg2)
+        o3 = (<) <$> arg2 <*> pure 0
+        o4 = (<) <$> arg1 <*> ((-) <$> pure minBound <*> arg2)
         o  = (|||) <$> ((&&&) <$> o1 <*> o2)
                    <*> ((&&&) <$> o3 <*> o4)
     in
-        ifS' o (write (F overflow) (pure 1)) (pure ())
+        ifS o (write (F Overflow) (pure 1)) (pure ())
         *>
         write (Reg reg) result
 
-    -- ifS ((==) <$> read (F zero) <*> pure 0)
+-- addS :: ( Num v, Bounded v, Eq v, Enum v, Ord v
+--         , Boolean (BoolType v), Eq (BoolType v)
+--         , IsRegister r, IsMemoryAddress addr, IsFlag flag)
+--      => r -> addr -> Semantics Selective MachineKey Value ()
+-- addS reg addr = \read write -> Just $
+--     bindS (read (Reg reg)) $ \arg1 ->
+--         bindS (read (Addr addr)) $ \arg2 ->
+--             let result = arg1 + arg2
+--                 o = arg2 > 0 && arg1 > (maxBound - arg2) ||
+--                     arg2 < 0 && arg1 < (minBound - arg2)
+--             in if o then (write (F Overflow) (pure 1)) else (pure ()) *>
+--                write (Reg reg) (pure $ result)
+
+    -- ifS ((==) <$> read (F Zero) <*> pure 0)
     --     (write IC $ pure simm)
     --     (write IC $ read IC)
 
@@ -260,87 +221,55 @@ addS reg addr = \read write -> Just $
 
 -- | Sub a value from memory location to one in a register.
 --   Applicative.
-sub :: (Num v, Eq v, IsRegister r, IsMemoryAddress addr, IsFlag flag)
-     => r -> addr -> Semantics Applicative (MachineKey r addr iaddr flag) v ()
+sub :: Register -> MemoryAddress -> Semantics Applicative MachineKey Value ()
 sub reg addr = \read write -> Just $
     let result = (-) <$> read (Reg reg) <*> read (Addr addr)
-    in  write (F zero)  result *>
+    in  write (F Zero)  result *>
         write (Reg reg) result
 
 -- | Multiply a value from memory location to one in a register.
 --   Applicative.
-mul :: (Num v, Eq v, IsRegister r, IsMemoryAddress addr, IsFlag flag)
-     => r -> addr -> Semantics Applicative (MachineKey r addr iaddr flag) v ()
+mul :: Register -> MemoryAddress -> Semantics Applicative MachineKey Value ()
 mul reg addr = \read write -> Just $
     let result = (*) <$> read (Reg reg) <*> read (Addr addr)
-    in  write (F zero)  result *>
+    in  write (F Zero)  result *>
         write (Reg reg) result
 
 -- | Subtract a value from memory location to one in a register.
 --   Applicative.
-div :: (Integral v, Eq v, IsRegister r, IsMemoryAddress addr, IsFlag flag)
-     => r -> addr -> Semantics Applicative (MachineKey r addr iaddr flag) v ()
+div :: Register -> MemoryAddress -> Semantics Applicative MachineKey Value ()
 div reg addr = \read write -> Just $
     let result = Prelude.div <$> read (Reg reg) <*> read (Addr addr)
-    in  write (F zero)  result *>
+    in  write (F Zero)  result *>
         write (Reg reg) result
 
-abs :: (Num v, Eq v, IsRegister r, IsMemoryAddress addr, IsFlag flag)
-     => r -> Semantics Applicative (MachineKey r addr iaddr flag) v ()
+abs :: Register -> Semantics Applicative MachineKey Value ()
 abs reg = \read write -> Just $
     let result = Prelude.abs <$> read (Reg reg)
     in  write (Reg reg) result
 
--- duplicate :: (Num v, Eq v, IsRegister r, IsMemoryAddress addr, IsFlag flag)
---           => r -> addr -> addr -> Semantics Applicative (MachineKey r addr iaddr flag) v ()
--- duplicate reg addr1 addr2 = \read write -> Just $
---     let -- c :: Applicative f => f (f (), f())
---         -- c = (\x -> (write (Addr addr1) (pure x), write (Addr addr2) (pure x))) <$> (read (Reg reg))
---         c = (\x -> (x, x)) <$> (read (Reg reg))
---     -- in write (Addr addr1) (fst <$> c) *> pure ()
---     in (bimap (write (Addr addr1) . pure) (write (Addr addr1) . pure) <$> c) *> pure ()
---     -- let x = read (Reg reg)
---     -- in write (Addr addr1) x *> write (Addr addr2) x
-
--- duplicateM :: (Num v, Eq v, IsRegister r, IsMemoryAddress addr, IsFlag flag)
---           => r -> addr -> addr -> Semantics Monad (MachineKey r addr iaddr flag) v ()
--- duplicateM reg addr1 addr2 = \read write -> Just $ do
---     x <- read (Reg reg)
---     write (Addr addr1) (pure x)
---     write (Addr addr2) (pure x)
-
 -- | Unconditional absolute jump.
 --   Functor.
-jump :: Num v => v -> Semantics Functor (MachineKey r addr iaddr flag) v ()
+jump :: Byte -> Semantics Functor MachineKey Value ()
 jump simm read write = Just $
     write IC (fmap (const simm) (read IC))
 
 -- | Indirect memory access.
 --   Monadic.
-loadMI :: (Num v, IsRegister r, IsMemoryAddress addr, v ~ addr)
-       => r -> addr -> Semantics Monad (MachineKey r addr iaddr flag) v ()
+loadMI :: Register -> MemoryAddress -> Semantics Monad MachineKey Value ()
 loadMI reg addr read write = Just $ do
     addr' <- read (Addr addr)
     write (Reg reg) (read (Addr addr'))
 
 -- | Jump (absolute) if 'Zero' flag is set.
 --   Selective.
-jumpZero :: (Num v, Eq v, IsFlag flag)
-         => v -> Semantics Selective (MachineKey r addr iaddr flag) v ()
+jumpZero :: Byte -> Semantics Selective MachineKey Value ()
 jumpZero simm read write = Just $
-    ifS ((==) <$> read (F zero) <*> pure 0)
+    ifS ((==) <$> read (F Zero) <*> pure 0)
         (write IC $ pure simm)
         (write IC $ read IC)
 --------------------------------------------------------------------------------
-executeInstruction :: (Integral v, Eq v, Bounded v, MachineBits v, MachineOrd v
-            , IsByte v, Boolean (BoolType v)
-            , Eq (BoolType v)
-            , IsInstructionCode code
-            , IsRegister r, Eq r
-            , IsMemoryAddress addr
-            , IsInstructionAddress iaddr
-            , IsFlag flag, addr ~ v, iaddr ~ v, code ~ v)
-         => Semantics Monad (MachineKey r addr iaddr flag) v ()
+executeInstruction :: Semantics Monad MachineKey Value ()
 executeInstruction = \read write -> Just $ do
     -- fetch instruction
     ic <- read IC

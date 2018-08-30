@@ -27,13 +27,16 @@ module Machine.Types (
     Flag (..), Flags, FlagId, flagId,
 
     -- System clock
-    Clock
+    Clock,
+
+    -- Numbers to [Bool] conversion
+    fromBitsLE, blastLE
     ) where
 
 import qualified Data.Map.Strict as Map
 import Data.Word (Word64)
 import Data.Int (Int64)
-import Data.Bits (Bits, FiniteBits)
+import Data.Bits
 
 -- | The 'Value' datatype represents data values. The precise
 -- bit-width is left unspecified, but it is assumed that it fits into 64 bits.
@@ -69,3 +72,11 @@ type Flags = Map.Map Flag Value
 -- | 'Clock' is the current time measured in clock cycles. It used to model the
 -- effect of the 'Iam.Semantics.wait' instruction.
 type Clock = Value
+--------------------------------------------------------------------------------
+fromBitsLE :: (FiniteBits a, Num a) => [Bool] -> a
+fromBitsLE = go 0 0
+  where go acc _  []     = acc
+        go acc i (x:xs) = go (if x then (setBit acc i) else acc) (i+1) xs
+
+blastLE :: FiniteBits a => a -> [Bool]
+blastLE x = map (testBit x) [0 .. finiteBitSize x - 1]
