@@ -9,30 +9,6 @@ import Machine.Instruction.Decode
 import Machine.Program
 import Machine.Semantics.Simulate
 
-emptyRegisters :: RegisterBank
-emptyRegisters = Map.fromList $ zip [R0, R1, R2, R3] [0, 0..]
-
-emptyFlags :: Flags
-emptyFlags = Map.fromList $ zip [Zero, Overflow, Halted] [0, 0..]
-
-initialiseMemory :: [(MemoryAddress, Value)] -> Memory
-initialiseMemory m =
-    let blankMemory = Map.fromList $ zip [0..1023] [0, 0..]
-    in foldr (\(addr, value) acc -> Map.adjust (const value) addr acc) blankMemory m
-
-dumpMemory :: Value -> Value -> Memory -> [Value]
-dumpMemory from to m = map ((Map.!) m) [from..to]
-
-boot :: Program -> Memory -> MachineState
-boot prog mem = MachineState { registers = emptyRegisters
-                            , instructionCounter = 0
-                            , instructionRegister = 0 -- encode $ Jump 0
-                            , program = prog
-                            , flags = emptyFlags
-                            , memory = mem
-                            , clock = 0
-                            }
-
 --------------------------------------------------------------------------------
 addExample :: Int -> Value -> Value -> IO ()
 addExample steps x y = do
