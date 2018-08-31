@@ -43,6 +43,7 @@ extra-deps:
 - github: snowleopard/selective
   commit: ab5858976f67d01d36c162490ab04251cf875b64
 - build-1.0
+- smallcheck-1.1.5
 
 # Override default flag values for local packages and extra-deps
 flags: {}
