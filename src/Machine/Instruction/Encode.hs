@@ -42,7 +42,10 @@ encode = \case
     Div      r addr -> fromBitsLE $ [f, f, t, f, t, f] ++ encodeRegister r
                                                        ++ encodeMemoryAddress addr
                                                        ++ pad 48
-    Abs      r      -> fromBitsLE $ [f, f, t, f, t, t] ++ encodeRegister r
+    Mod      r addr -> fromBitsLE $ [f, f, t, f, t, t] ++ encodeRegister r
+                                                       ++ encodeMemoryAddress addr
+                                                       ++ pad 48
+    Abs      r      -> fromBitsLE $ [f, f, t, t, f, f] ++ encodeRegister r
                                                        ++ pad 56
     where f = false
           t = true
@@ -60,6 +63,6 @@ encodeMemoryAddress :: MemoryAddress -> [Bool]
 encodeMemoryAddress = take 8 . blastLE
 
 -- | 'Byte' is stored in the leading 8 bits (little-endian) of a 'Value'
-encodeByte :: Byte -> [Bool]
+encodeByte :: SImm8 -> [Bool]
 encodeByte = take 8 . blastLE
 --------------------------------------------------------------------------------

@@ -10,14 +10,15 @@ import Machine.Types
 data Instruction = Halt
                  | Load     Register MemoryAddress
                  | LoadMI   Register MemoryAddress
-                 | Set      Register Byte
+                 | Set      Register SImm8
                  | Store    Register MemoryAddress
                  | Add      Register MemoryAddress
-                 | Jump     Byte
-                 | JumpZero Byte
+                 | Jump     SImm8
+                 | JumpZero SImm8
                  | Sub      Register MemoryAddress
                  | Mul      Register MemoryAddress
                  | Div      Register MemoryAddress
+                 | Mod      Register MemoryAddress
                  | Abs      Register
     deriving (Show, Read, Eq, Ord)
 
