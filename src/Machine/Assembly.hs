@@ -58,7 +58,7 @@ loadMI :: Register -> MemoryAddress -> Script
 loadMI rX dmemaddr = write (LoadMI rX dmemaddr)
 
 -- | Load an immediate value to a register
-set :: Register -> Byte -> Script
+set :: Register -> SImm8 -> Script
 set rX simm = write (Set rX simm)
 
 -- | Store a value from a register to a memory location
@@ -71,11 +71,11 @@ add :: Register -> MemoryAddress -> Script
 add rX dmemaddr = write (Add rX dmemaddr)
 
 -- | Perform an unconditional jump
-jump :: Byte -> Script
+jump :: SImm8 -> Script
 jump simm = write (Jump simm)
 
 -- | Perform a jump if 'Zero' flag is set
-jumpZero :: Byte -> Script
+jumpZero :: SImm8 -> Script
 jumpZero simm = write (JumpZero simm)
 
 -- | Stop the machine operation
