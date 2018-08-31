@@ -8,8 +8,8 @@
 
 module Machine.Semantics where
 
-import Prelude hiding (Monad, read, div, abs, and, or)
-import qualified Prelude (Monad, div, abs)
+import Prelude hiding (Monad, read, div, mod, abs, and, or)
+import qualified Prelude (Monad, div, mod, abs)
 import Data.Maybe (fromJust)
 import Control.Monad (join)
 import Data.SBV (Boolean (..))
@@ -53,14 +53,14 @@ semanticsF code =
                 const (const Nothing)
           | opcode == [false, false, false, false, true, true]  ->
                 setF (decodeRegister . extractRegister $ expandedCode)
-                     (fromBitsLE $ extractByte expandedCode)
+                     (fromBitsLE $ extractSImm8 expandedCode)
           | opcode == [false, false, false, true, false, false]   ->
                 store (decodeRegister . extractRegister $ expandedCode)
                       (fromBitsLE $ extractMemoryAddress expandedCode)
           | opcode == [false, false, false, true, false, true]   ->
                 const (const Nothing)
           | opcode == [false, false, false, true, true, false]   ->
-                jump (fromBitsLE $ extractByteJump expandedCode)
+                jump (fromBitsLE $ extractSImm8Jump expandedCode)
           | opcode == [false, false, false, true, true, true]    ->
                 const (const Nothing)
 
@@ -80,7 +80,7 @@ semanticsA code =
                 const (const Nothing)
           | opcode == [false, false, false, false, true, true]  ->
                 setA (decodeRegister . extractRegister $ expandedCode)
-                     (fromBitsLE $ extractByte expandedCode)
+                     (fromBitsLE $ extractSImm8 expandedCode)
           | opcode == [false, false, false, true, false, false]   ->
                 store (decodeRegister . extractRegister $ expandedCode)
                       (fromBitsLE $ extractMemoryAddress expandedCode)
@@ -88,7 +88,7 @@ semanticsA code =
                 add (decodeRegister . extractRegister $ expandedCode)
                     (fromBitsLE $ extractMemoryAddress expandedCode)
           | opcode == [false, false, false, true, true, false]   ->
-                jump (fromBitsLE $ extractByteJump expandedCode)
+                jump (fromBitsLE $ extractSImm8Jump expandedCode)
           | opcode == [false, false, false, true, true, true]    ->
                 const (const Nothing)
           | opcode == [false, false, true, false, false, false]    ->
@@ -101,6 +101,9 @@ semanticsA code =
                 div (decodeRegister . extractRegister $ expandedCode)
                             (fromBitsLE $ extractMemoryAddress expandedCode)
           | opcode == [false, false, true, false, true, true]    ->
+                mod (decodeRegister . extractRegister $ expandedCode)
+                            (fromBitsLE $ extractMemoryAddress expandedCode)
+          | opcode == [false, false, true, true, false, false]    ->
                 abs (decodeRegister . extractRegister $ expandedCode)
 
 semanticsS :: InstructionCode -> Semantics Selective MachineKey Value ()
@@ -108,7 +111,7 @@ semanticsS code =
     let expandedCode = blastLE code
         opcode = take 6 expandedCode
     in if | opcode == [false, false, false, true, true, true]    ->
-                jumpZero (fromBitsLE $ extractByteJump expandedCode)
+                jumpZero (fromBitsLE $ extractSImm8Jump expandedCode)
           | opcode == [false, false, false, true, false, true]   ->
                 addS (decodeRegister . extractRegister $ expandedCode)
                      (fromBitsLE $ extractMemoryAddress expandedCode)
@@ -148,15 +151,15 @@ load reg addr read write = Just $
 
 -- | Set a register value.
 --   Functor.
-setF :: Register -> Byte -> Semantics Functor MachineKey Value ()
+setF :: Register -> SImm8 -> Semantics Functor MachineKey Value ()
 setF reg simm read write = Just $
-    write (Reg reg) ((const simm) <$> (read (Reg reg)))
+    write (Reg reg) ((const . unsafeFromSImm8 $ simm) <$> (read (Reg reg)))
 
 -- | Set a register value.
 --   Applicative.
-setA :: Register -> Byte -> Semantics Applicative MachineKey Value ()
+setA :: Register -> SImm8 -> Semantics Applicative MachineKey Value ()
 setA reg simm read write = Just $
-    write (Reg reg) (pure simm)
+    write (Reg reg) (pure . unsafeFromSImm8 $ simm)
 
 -- | Store a value from a register to a memory location.
 --   Functor.
@@ -243,16 +246,22 @@ div reg addr = \read write -> Just $
     in  write (F Zero)  result *>
         write (Reg reg) result
 
+mod :: Register -> MemoryAddress -> Semantics Applicative MachineKey Value ()
+mod reg addr = \read write -> Just $
+    let result = Prelude.mod <$> read (Reg reg) <*> read (Addr addr)
+    in  write (F Zero)  result *>
+        write (Reg reg) result
+
 abs :: Register -> Semantics Applicative MachineKey Value ()
 abs reg = \read write -> Just $
     let result = Prelude.abs <$> read (Reg reg)
     in  write (Reg reg) result
 
--- | Unconditional absolute jump.
+-- | Unconditional jump.
 --   Functor.
-jump :: Byte -> Semantics Functor MachineKey Value ()
+jump :: SImm8 -> Semantics Functor MachineKey Value ()
 jump simm read write = Just $
-    write IC (fmap (const simm) (read IC))
+    write IC (fmap ((+) . unsafeFromSImm8 $ simm) (read IC))
 
 -- | Indirect memory access.
 --   Monadic.
@@ -261,12 +270,12 @@ loadMI reg addr read write = Just $ do
     addr' <- read (Addr addr)
     write (Reg reg) (read (Addr addr'))
 
--- | Jump (absolute) if 'Zero' flag is set.
+-- | Jump if 'Zero' flag is set.
 --   Selective.
-jumpZero :: Byte -> Semantics Selective MachineKey Value ()
+jumpZero :: SImm8 -> Semantics Selective MachineKey Value ()
 jumpZero simm read write = Just $
     ifS ((==) <$> read (F Zero) <*> pure 0)
-        (write IC $ pure simm)
+        (write IC (fmap ((+) . unsafeFromSImm8 $ simm) (read IC)))
         (write IC $ read IC)
 --------------------------------------------------------------------------------
 executeInstruction :: Semantics Monad MachineKey Value ()
@@ -275,7 +284,7 @@ executeInstruction = \read write -> Just $ do
     ic <- read IC
     write IR (read (Prog ic))
     -- increment instruction counter
-    write IC ((+ 1) <$> read IC)
+    write IC (pure $ ic + 1)
     -- read instruction register and execute the instruction
     i <- read IR
     fromJust $ semanticsM i read write

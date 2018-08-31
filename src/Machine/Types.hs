@@ -15,7 +15,7 @@ module Machine.Types (
     Value,
 
     -- * Signed immediate arguments
-    Byte,
+    SImm8, unsafeFromSImm8, unsafeToSImm8,
 
     -- * Registers
     Register (..), RegisterBank,
@@ -34,15 +34,22 @@ module Machine.Types (
     ) where
 
 import qualified Data.Map.Strict as Map
-import Data.Word (Word64)
-import Data.Int (Int64)
+import Data.Word (Word8, Word16, Word64)
+import Data.Int (Int8, Int64)
 import Data.Bits
 
 -- | The 'Value' datatype represents data values. The precise
 -- bit-width is left unspecified, but it is assumed that it fits into 64 bits.
 type Value = Int64
 
-type Byte = Value
+type SImm8 = Int8
+
+unsafeToSImm8 :: Value -> SImm8
+unsafeToSImm8 = fromIntegral
+
+unsafeFromSImm8 :: SImm8 -> Value
+unsafeFromSImm8 = fromIntegral
+
 
 data Register = R0 | R1 | R2 | R3
     deriving (Show, Read, Eq, Ord, Enum)

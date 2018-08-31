@@ -20,7 +20,7 @@ decode code =
                        (fromBitsLE $ extractMemoryAddress expandedCode)
           | opcode == [f, f, f, f, t, t]  ->
                 Set (decodeRegister . extractRegister $ expandedCode)
-                    (fromBitsLE $ extractByte expandedCode)
+                    (fromBitsLE $ extractSImm8 expandedCode)
           | opcode == [f, f, f, t, f, f]   ->
                 Store (decodeRegister . extractRegister $ expandedCode)
                       (fromBitsLE $ extractMemoryAddress expandedCode)
@@ -28,9 +28,9 @@ decode code =
                 Add (decodeRegister . extractRegister $ expandedCode)
                     (fromBitsLE $ extractMemoryAddress expandedCode)
           | opcode == [f, f, f, t, t, f]   ->
-                Jump (fromBitsLE $ extractByteJump expandedCode)
+                Jump (fromBitsLE $ extractSImm8Jump expandedCode)
           | opcode == [f, f, f, t, t, t]    ->
-                JumpZero (fromBitsLE $ extractByteJump expandedCode)
+                JumpZero (fromBitsLE $ extractSImm8Jump expandedCode)
           | opcode == [f, f, t, f, f, f]   ->
                 Sub (decodeRegister . extractRegister $ expandedCode)
                     (fromBitsLE $ extractMemoryAddress expandedCode)
@@ -41,6 +41,9 @@ decode code =
                 Div (decodeRegister . extractRegister $ expandedCode)
                     (fromBitsLE $ extractMemoryAddress expandedCode)
           | opcode == [f, f, t, f, t, t]   ->
+                Mod (decodeRegister . extractRegister $ expandedCode)
+                    (fromBitsLE $ extractMemoryAddress expandedCode)
+          | opcode == [f, f, t, t, f, f]   ->
                 Abs (decodeRegister . extractRegister $ expandedCode)
       where f = False
             t = True
@@ -59,11 +62,11 @@ extractRegister = take 2 . drop 6
 extractMemoryAddress :: [Bool] -> [Bool]
 extractMemoryAddress = (++ pad 56) . take 8 . drop 8
 
-extractByte :: [Bool] -> [Bool]
-extractByte = (++ pad 56) . take 8 . drop 8
+extractSImm8 :: [Bool] -> [Bool]
+extractSImm8 = (++ pad 56) . take 8 . drop 8
 
-extractByteJump :: [Bool] -> [Bool]
-extractByteJump = (++ pad 56) . take 8 . drop 6
+extractSImm8Jump :: [Bool] -> [Bool]
+extractSImm8Jump = (++ pad 56) . take 8 . drop 6
 
 pad :: Int -> [Bool]
 pad k = replicate k False

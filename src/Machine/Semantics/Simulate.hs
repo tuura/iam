@@ -23,7 +23,7 @@ data MachineState = MachineState
 runModel :: Int -> MachineState -> MachineState
 runModel steps state
     | steps <= 0 = state
-    | otherwise  = if halted then state else (runModel (steps - 1) nextState)
+    | otherwise  = if halted then state else runModel (steps - 1) nextState
   where
     halted    = (Map.!) (flags state) Halted /= 0
     nextState = case (executeInstruction readKey writeKey) of
@@ -89,7 +89,7 @@ readMemory address = do
 
 toMemoryAddress :: Value -> State MachineState (MemoryAddress)
 toMemoryAddress value = do
-    let valid = value < 256
+    let valid = value <= 255
     -- return $ fromBitsLE (take 8 $ blastLE value)
     pure value
 
