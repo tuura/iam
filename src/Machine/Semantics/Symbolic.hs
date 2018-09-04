@@ -35,12 +35,22 @@ symStep state =
           Load reg addr -> singleton $ do
               x <- readMemory addr
               writeRegister reg x
+          LoadMI _ _ -> error "LoadMI semantics not implemented."
+          Set reg value -> singleton $ do
+              writeRegister reg (SConst . fromIntegral $ value)
+          Store reg addr -> singleton $
+              readRegister reg >>= writeMemory addr
           Add reg addr -> singleton $ do
               x <- readRegister reg
               y <- readMemory addr
               let result = SAdd x y
               writeRegister reg result
               writeFlag Zero result
+          Jump offset -> singleton $
+              modify $ \state ->
+                state { instructionCounter =
+                            instructionCounter state + (fromIntegral offset)
+                      }
           JumpZero offset -> let isZero = SEq ((Map.!) (flags state) Zero) (SConst 0) in
           -- The computation branches and we return a list of two possible states:
                               [ modify $ \state -> -- flag 'Zero@ is set and we jump
@@ -49,11 +59,22 @@ symStep state =
                                         , pathConstraintList = isZero : pathConstraintList state
                                         }
                               , modify $ \state -> -- otherwise don't jump
-                                  state { instructionCounter = instructionCounter state + 1
-                                        , pathConstraintList = SNot isZero : pathConstraintList state
+                                  state { pathConstraintList = SNot isZero : pathConstraintList state
                                         }
                               ]
-          _ -> error "semantics undefined"
+          Sub reg addr -> singleton $ do
+              x <- readRegister reg
+              y <- readMemory addr
+              let result = SSub x y
+              writeRegister reg result
+              writeFlag Zero result
+          Mod reg addr -> singleton $ do
+              x <- readRegister reg
+              y <- readMemory addr
+              let result = SMod x y
+              writeRegister reg result
+              writeFlag Zero result
+        --   _ -> error "semantics undefined"
     where singleton x = [x]
 --------------------------------------------------------------------------------
 ------------ Clock -------------------------------------------------------------
