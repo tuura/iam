@@ -6,51 +6,21 @@ module Machine.Semantics.Symbolic where
 import qualified Data.Tree as Tree
 import qualified Data.Map.Strict as Map
 import Data.Monoid ((<>))
-import Text.Pretty.Simple
+
 import Control.Monad.State
 import Machine.Types
 import Machine.Instruction
 import Machine.Instruction.Decode
 import Machine.Instruction.Encode
 import Machine.Program hiding (readProgram)
-import Data.Word (Word8)
-
--- | Symbolic expressions
-data Sym = SAdd Sym Sym
-         | SConst Value
-         | SAnd Sym Sym
-         | SAny Int     -- Any value or the set of all values
-         deriving (Eq, Ord)
-
-instance Show Sym where
-    show (SAdd x y) = "(" <> show x <> " + " <> show y <> ")"
-    show (SConst x) = show x
-    show (SAnd x y) = "(" <> show x <> " & " <> show y <> ")"
-    show (SAny n  ) = "val_" ++ show n
-
-data SymState = SymState { registers         :: Map.Map Register Sym
-                         , instructionCounter :: InstructionAddress
-                         , instructionRegister :: InstructionCode
-                         , flags :: Flags
-                         , memory :: Map.Map Word8 Sym
-                         , program :: Program
-                         , clock :: Clock
-
-                         , uniqueVarCounter  :: Int
-                         , pathConstraintList :: [Sym]
-                         }
-
-instance Show SymState where
-    show state = "Registers: " <> show (registers state)
-
-type Trace = Tree.Tree SymState
+import Machine.Semantics.Symbolic.Types
 
 runModel :: Int -> SymState -> Trace
 runModel steps state
     | steps <= 0 = Tree.Node state []
     | otherwise  = if halted then Tree.Node state [] else Tree.Node state children
   where
-    halted    = (Map.!) (flags state) Halted /= 0
+    halted    = (Map.!) (flags state) Halted /= (SConst 0)
     newStates = symStep state
     children  = runModel (steps - 1) <$> newStates
 
@@ -60,55 +30,31 @@ symStep state =
                                     fetchInstruction
                                     incrementInstructionCounter
                                     readInstructionRegister
-    in pure . snd $ (flip runState) fetched $ case decode instrCode of
-          Halt -> writeFlag Halted 1
-          Load reg addr -> do
+    in (snd . ((flip runState) fetched)) <$> case decode instrCode of
+          Halt -> singleton $ writeFlag Halted (SConst 1)
+          Load reg addr -> singleton $ do
               x <- readMemory addr
               writeRegister reg x
-          Add reg addr -> do
+          Add reg addr -> singleton $ do
               x <- readRegister reg
               y <- readMemory addr
-              writeRegister reg (SAdd x y)
+              let result = SAdd x y
+              writeRegister reg result
+              writeFlag Zero result
+          JumpZero offset -> let isZero = SEq ((Map.!) (flags state) Zero) (SConst 0) in
+          -- The computation branches and we return a list of two possible states:
+                              [ modify $ \state -> -- flag 'Zero@ is set and we jump
+                                  state { instructionCounter =
+                                             instructionCounter state + (fromIntegral offset)
+                                        , pathConstraintList = isZero : pathConstraintList state
+                                        }
+                              , modify $ \state -> -- otherwise don't jump
+                                  state { instructionCounter = instructionCounter state + 1
+                                        , pathConstraintList = SNot isZero : pathConstraintList state
+                                        }
+                              ]
           _ -> error "semantics undefined"
-
-emptyRegisters :: Map.Map Register Sym
-emptyRegisters = Map.fromList $ zip [R0, R1, R2, R3] (map SConst [0, 0..])
-
-emptyFlags :: Flags
-emptyFlags = Map.fromList $ zip [Zero, Overflow, Halted] [0, 0..]
-
-initialiseMemory :: [(MemoryAddress, Sym)] -> Map.Map Word8 Sym
-initialiseMemory vars =
-    let blankMemory = Map.fromList $ zip [0..255] (map SConst [0, 0..])
-    in foldr (\(addr, value) acc -> Map.adjust (const value) (fromIntegral addr) acc) blankMemory vars
-
-boot :: Program -> Map.Map Word8 Sym -> SymState
-boot prog mem = SymState { registers = emptyRegisters
-                         , instructionCounter = 0
-                         , instructionRegister = 0 -- encode $ Jump 0
-                         , program = prog
-                         , flags = emptyFlags
-                         , memory = mem
-                         , clock = 0
-
-                         , uniqueVarCounter  = 0
-                         , pathConstraintList = []
-                         }
-
---------------------------------------------------------------------------------
-
-addExample :: IO ()
-addExample = do
-    print "Add works as '+'."
-    let prog = [ (0, encode $ Load R0 0)
-               , (1, encode $ Add  R0 1)
-               , (2, encode Halt)]
-        steps = 10
-        machineAdd x y = let mem = initialiseMemory [(0, x), (1, y)]
-                             initialState = boot prog mem
-                             trace = runModel steps initialState
-                         in  trace
-    putStrLn $ Tree.drawTree $ fmap show $ machineAdd (SAny 0) (SAny 1)
+    where singleton x = [x]
 --------------------------------------------------------------------------------
 ------------ Clock -------------------------------------------------------------
 --------------------------------------------------------------------------------
@@ -168,7 +114,7 @@ writeRegister register value = do
 
 -- | Lookup the value of a given 'Flag'. If the flag is not currently assigned
 -- any value, it is assumed to be 'False'.
-readFlag :: Flag -> State SymState Value
+readFlag :: Flag -> State SymState Sym
 readFlag flag = do
     currentState <- get
     pure $ (Map.!) (flags currentState) flag
@@ -176,7 +122,7 @@ readFlag flag = do
 -- | Set a given 'Flag' to the specified Boolean value.
 --   We assume that it takes 1 clock cycle to access
 --   the flag register in hardware.
-writeFlag :: Flag -> Value -> State SymState ()
+writeFlag :: Flag -> Sym -> State SymState ()
 writeFlag flag value = do
     delay 1
     modify $ \currentState ->
