@@ -14,6 +14,8 @@ import Data.Word (Word8)
 
 -- | Symbolic expressions
 data Sym = SAdd Sym Sym
+         | SSub Sym Sym
+         | SMod Sym Sym
          | SConst Value
          | SAnd Sym Sym
          | SAny Int     -- Any value or the set of all values
@@ -23,6 +25,8 @@ data Sym = SAdd Sym Sym
 
 instance Show Sym where
     show (SAdd x y) = "(" <> show x <> " + " <> show y <> ")"
+    show (SSub x y) = "(" <> show x <> " - " <> show y <> ")"
+    show (SMod x y) = "(" <> show x <> " % " <> show y <> ")"
     show (SConst x) = show x
     show (SAnd x y) = "(" <> show x <> " & " <> show y <> ")"
     show (SAny n  ) = "val_" <> show n
