@@ -40,7 +40,7 @@ import Data.Bits
 
 -- | The 'Value' datatype represents data values. The precise
 -- bit-width is left unspecified, but it is assumed that it fits into 64 bits.
-type Value = Int64
+type Value = Word -- Int64
 
 type SImm8 = Int8
 
