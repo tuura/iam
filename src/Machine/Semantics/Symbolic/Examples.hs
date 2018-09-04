@@ -10,6 +10,7 @@ import Machine.Program
 import Machine.Types
 import Machine.Semantics.Symbolic.Types
 import Machine.Semantics.Symbolic hiding (readProgram)
+import Machine.Semantics.Symbolic.SMT
 
 assemble :: [Instruction] -> Program
 assemble = zip [0..] . map (\i -> encode i)
@@ -56,3 +57,18 @@ gcdExample = do
         initialState = boot prog mem
         trace = runModel steps initialState
     putStrLn $ Tree.drawTree $ fmap show $ trace
+
+gcdExampleSolved :: IO ()
+gcdExampleSolved = do
+    let prog = unsafePerformIO . readProgram $ "examples/gcd.asm"
+        steps = 20
+        -- x = SConst 2 -- SAny 0
+        -- y = SConst 3 -- SAny 1
+        x = SAny 0
+        y = SAny 1
+        mem = initialiseMemory [(0, x), (1, y)]
+        initialState = boot prog mem
+        trace = runModel steps initialState
+    -- putStrLn $ Tree.drawTree $ fmap show $ trace
+    s <- solveSym trace
+    putStrLn $ Tree.drawTree $ fmap renderSolvedState s
