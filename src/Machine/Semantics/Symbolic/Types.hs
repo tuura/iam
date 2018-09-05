@@ -18,8 +18,11 @@ data Sym = SAdd Sym Sym
          | SMod Sym Sym
          | SConst Value
          | SAnd Sym Sym
+         | SOr Sym Sym
          | SAny Int     -- Any value or the set of all values
          | SEq Sym Sym
+         | SGt Sym Sym
+         | SLt Sym Sym
          | SNot Sym
          deriving (Eq, Ord)
 
@@ -29,8 +32,11 @@ instance Show Sym where
     show (SMod x y) = "(" <> show x <> " % " <> show y <> ")"
     show (SConst x) = show x
     show (SAnd x y) = "(" <> show x <> " & " <> show y <> ")"
+    show (SOr  x y) = "(" <> show x <> " | " <> show y <> ")"
     show (SAny n  ) = "val_" <> show n
     show (SEq  x y) = "(" <> show x <> " == " <> show y <> ")"
+    show (SGt  x y) = "(" <> show x <> " > " <> show y <> ")"
+    show (SLt  x y) = "(" <> show x <> " < " <> show y <> ")"
     show (SNot b ) = "¬" <> show b
 
 -- | The state of symbolic computation

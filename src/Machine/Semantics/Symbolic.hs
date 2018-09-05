@@ -46,6 +46,15 @@ symStep state =
               let result = SAdd x y
               writeRegister reg result
               writeFlag Zero result
+         --   (((si_b > 0) && (si_a > (INT_MAX - si_b))) ||
+         --    ((si_b < 0) && (si_a < (INT_MIN - si_b)))) {
+              let o1 = SGt y (SConst 0)
+                  o2 = SGt x (SSub (SConst maxBound) y)
+                  o3 = SLt y (SConst 0)
+                  o4 = SLt x (SSub (SConst minBound) y)
+                  o  = SOr (SAnd o1 o2)
+                           (SAnd o3 o4)
+              writeFlag Overflow o
           Jump offset -> singleton $
               modify $ \state ->
                 state { instructionCounter =
