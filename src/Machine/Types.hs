@@ -15,7 +15,7 @@ module Machine.Types (
     Value,
 
     -- * Signed immediate arguments
-    SImm8, unsafeFromSImm8, unsafeToSImm8,
+    SImm8,
 
     -- * Registers
     Register (..), RegisterBank,
@@ -43,13 +43,6 @@ import Data.Bits
 type Value = Int16
 
 type SImm8 = Int8
-
-unsafeToSImm8 :: Value -> SImm8
-unsafeToSImm8 = fromIntegral
-
-unsafeFromSImm8 :: SImm8 -> Value
-unsafeFromSImm8 = fromIntegral
-
 
 data Register = R0 | R1 | R2 | R3
     deriving (Show, Read, Eq, Ord, Enum)
