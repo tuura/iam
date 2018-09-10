@@ -9,6 +9,7 @@ import Data.Monoid ((<>))
 
 import Control.Monad.State
 import Machine.Types
+import Machine.Types.Value
 import Machine.Instruction
 import Machine.Instruction.Decode
 import Machine.Instruction.Encode
