@@ -20,8 +20,10 @@ gatherFree :: Sym -> Set.Set Sym
 gatherFree c@(SAny _) = Set.singleton c
 gatherFree (SAdd l r) = gatherFree l <> gatherFree r
 gatherFree (SSub l r) = gatherFree l <> gatherFree r
+gatherFree (SDiv l r) = gatherFree l <> gatherFree r
 gatherFree (SMod l r) = gatherFree l <> gatherFree r
 gatherFree (SEq l r)  = gatherFree l <> gatherFree r
+gatherFree (SAbs l)   = gatherFree l
 gatherFree (SNot c)   = gatherFree c
 gatherFree (SOr l r)  = gatherFree l <> gatherFree r
 gatherFree (SAnd l r) = gatherFree l <> gatherFree r
@@ -67,9 +69,13 @@ symToSMT m (SAdd l r) =
   SBV.svPlus <$> symToSMT m l <*> symToSMT m r
 symToSMT m (SSub l r) =
   SBV.svMinus <$> symToSMT m l <*> symToSMT m r
+symToSMT m (SDiv l r) =
+  SBV.svQuot <$> symToSMT m l <*> symToSMT m r
 symToSMT m (SMod l r) =
   SBV.svRem <$> symToSMT m l <*> symToSMT m r
 symToSMT _ (SConst w) =  pure $ valueToSVal w
+symToSMT m (SAbs l) =
+  SBV.svAbs <$> symToSMT m l
 symToSMT m (SNot c) =
   let c' = symToSMT m c
   in sValToSWord <$> (SBV.svNot <$> (sValToSBool <$> c'))
