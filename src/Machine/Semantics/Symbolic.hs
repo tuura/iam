@@ -6,6 +6,7 @@ module Machine.Semantics.Symbolic where
 import qualified Data.Tree as Tree
 import qualified Data.Map.Strict as Map
 import Data.Monoid ((<>))
+import Data.Maybe (fromJust)
 
 import Control.Monad.State
 import Machine.Types
@@ -13,6 +14,7 @@ import Machine.Types.Value
 import Machine.Instruction
 import Machine.Instruction.Decode
 import Machine.Instruction.Encode
+import Machine.Semantics
 import Machine.Program hiding (readProgram)
 import Machine.Semantics.Symbolic.Types
 
@@ -25,6 +27,28 @@ runModel steps state
     newStates = symStep state
     children  = runModel (steps - 1) <$> newStates
 
+-- | Instance of the Machine.Metalanguage read command for symbolic execution
+readKey :: MachineKey -> State SymState Sym
+readKey = \case
+    Reg  reg  -> readRegister reg
+    Addr addr -> readMemory   addr
+    F    flag -> readFlag     flag
+    IC        -> error "Machine.Semantics.Symbolic: Can't read IC" -- instructionCounter <$> get
+    IR        -> error "Machine.Semantics.Symbolic: Can't read IR" -- readInstructionRegister
+    Prog addr -> error "Machine.Semantics.Symbolic: Can't read Program" -- readProgram addr
+
+-- | Instance of the Machine.Metalanguage write command for symbolic execution
+writeKey :: MachineKey
+         -> State SymState Sym
+         -> State SymState ()
+writeKey k v = case k of
+    Reg  reg  -> v >>= writeRegister reg
+    Addr addr -> v >>= writeMemory   addr
+    F    flag -> v >>= writeFlag flag
+    IC        -> error "Machine.Semantics.Symbolic: Can't write IC"
+    IR        -> error "Machine.Semantics.Symbolic: Can't write IR"
+    Prog addr -> error "Machine.Semantics.Symbolic: Can't write Program"
+
 symStep :: SymState -> [SymState]
 symStep state =
     let (instrCode, fetched) = (flip runState) state $ do
@@ -32,30 +56,13 @@ symStep state =
                                     incrementInstructionCounter
                                     readInstructionRegister
     in (snd . ((flip runState) fetched)) <$> case decode instrCode of
-          Halt -> singleton $ writeFlag Halted (SConst 1)
-          Load reg addr -> singleton $ do
-              x <- readMemory addr
-              writeRegister reg x
-          LoadMI _ _ -> error "LoadMI semantics not implemented."
-          Set reg value -> singleton $ do
-              writeRegister reg (SConst . fromIntegral $ value)
+          Halt ->           singleton . fromJust $ semanticsM instrCode readKey writeKey
+          Load reg addr ->  singleton . fromJust $ semanticsM instrCode readKey writeKey
+          LoadMI _ _ ->     error "LoadMI semantics not implemented."
+          Set reg value ->  singleton . fromJust $ semanticsM instrCode readKey writeKey
           Store reg addr -> singleton $
               readRegister reg >>= writeMemory addr
-          Add reg addr -> singleton $ do
-              x <- readRegister reg
-              y <- readMemory addr
-              let result = SAdd x y
-              writeRegister reg result
-              writeFlag Zero result
-         --   (((si_b > 0) && (si_a > (INT_MAX - si_b))) ||
-         --    ((si_b < 0) && (si_a < (INT_MIN - si_b)))) {
-              let o1 = SGt y (SConst 0)
-                  o2 = SGt x (SSub (SConst maxBound) y)
-                  o3 = SLt y (SConst 0)
-                  o4 = SLt x (SSub (SConst minBound) y)
-                  o  = SOr (SAnd o1 o2)
-                           (SAnd o3 o4)
-              writeFlag Overflow o
+          Add reg addr -> singleton . fromJust $ semanticsM instrCode readKey writeKey
           Jump offset -> singleton $
               modify $ \state ->
                 state { instructionCounter =
@@ -63,29 +70,22 @@ symStep state =
                       }
           JumpZero offset -> let isZero = SEq ((Map.!) (flags state) Zero) (SConst 0) in
           -- The computation branches and we return a list of two possible states:
-                              [ modify $ \state -> -- flag 'Zero@ is set and we jump
+                              [ modify $ \state -> -- flag 'Zero' is set and we jump
                                   state { instructionCounter =
                                              instructionCounter state + (fromIntegral offset)
                                         , pathConstraintList = isZero : pathConstraintList state
                                         }
-                              , modify $ \state -> -- otherwise don't jump
+                              , modify $ \state -> -- otherwise we don't jump
                                   state { pathConstraintList = SNot isZero : pathConstraintList state
                                         }
                               ]
-          Sub reg addr -> singleton $ do
-              x <- readRegister reg
-              y <- readMemory addr
-              let result = SSub x y
-              writeRegister reg result
-              writeFlag Zero result
-          Mod reg addr -> singleton $ do
-              x <- readRegister reg
-              y <- readMemory addr
-              let result = SMod x y
-              writeRegister reg result
-              writeFlag Zero result
-        --   _ -> error "semantics undefined"
+          Sub reg addr -> singleton . fromJust $ semanticsM instrCode readKey writeKey
+          Mod reg addr -> singleton . fromJust $ semanticsM instrCode readKey writeKey
+          Mul reg addr -> singleton . fromJust $ semanticsM instrCode readKey writeKey
+          Div reg addr -> singleton . fromJust $ semanticsM instrCode readKey writeKey
+          Abs reg      -> singleton . fromJust $ semanticsM instrCode readKey writeKey
     where singleton x = [x]
+
 --------------------------------------------------------------------------------
 ------------ Clock -------------------------------------------------------------
 --------------------------------------------------------------------------------

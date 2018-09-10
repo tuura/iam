@@ -82,10 +82,10 @@ gcdExample = do
         trace = runModel steps initialState
     putStrLn $ Tree.drawTree $ fmap show $ trace
 
-gcdExampleSolved :: IO ()
-gcdExampleSolved = do
+gcdExampleSMT :: IO ()
+gcdExampleSMT = do
     let prog = unsafePerformIO . readProgram $ "examples/gcd.asm"
-        steps = 20
+        steps = 10
         -- x = SConst 2 -- SAny 0
         -- y = SConst 3 -- SAny 1
         x = SAny 0
