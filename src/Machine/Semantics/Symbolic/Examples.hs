@@ -72,11 +72,11 @@ jzExample = do
 gcdExample :: IO ()
 gcdExample = do
     let prog = unsafePerformIO . readProgram $ "examples/gcd.asm"
-        steps = 20
+        steps = 50
         -- x = SConst 2 -- SAny 0
         -- y = SConst 3 -- SAny 1
-        x = SAny 0
-        y = SAny 1
+        x = SAny 42
+        y = SAny 24
         mem = initialiseMemory [(0, x), (1, y)]
         initialState = boot prog mem
         trace = runModel steps initialState
@@ -85,7 +85,7 @@ gcdExample = do
 gcdExampleSMT :: IO ()
 gcdExampleSMT = do
     let prog = unsafePerformIO . readProgram $ "examples/gcd.asm"
-        steps = 10
+        steps = 20
         -- x = SConst 2 -- SAny 0
         -- y = SConst 3 -- SAny 1
         x = SAny 0

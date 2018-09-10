@@ -33,7 +33,7 @@ readKey = \case
     Reg  reg  -> readRegister reg
     Addr addr -> readMemory   addr
     F    flag -> readFlag     flag
-    IC        -> error "Machine.Semantics.Symbolic: Can't read IC" -- instructionCounter <$> get
+    IC        -> SConst . instructionCounter <$> get -- error "Machine.Semantics.Symbolic: Can't read IC"
     IR        -> error "Machine.Semantics.Symbolic: Can't read IR" -- readInstructionRegister
     Prog addr -> error "Machine.Semantics.Symbolic: Can't read Program" -- readProgram addr
 
@@ -45,7 +45,11 @@ writeKey k v = case k of
     Reg  reg  -> v >>= writeRegister reg
     Addr addr -> v >>= writeMemory   addr
     F    flag -> v >>= writeFlag flag
-    IC        -> error "Machine.Semantics.Symbolic: Can't write IC"
+    IC        -> do
+        ic' <- v
+        case ic' of
+            (SConst val) -> modify $ \currentState -> currentState {instructionCounter = val}
+            _ -> error "Machine.Semantics.Symbolic.writeKey: symbolic IC is not supported"
     IR        -> error "Machine.Semantics.Symbolic: Can't write IR"
     Prog addr -> error "Machine.Semantics.Symbolic: Can't write Program"
 
@@ -63,11 +67,7 @@ symStep state =
           Store reg addr -> singleton $
               readRegister reg >>= writeMemory addr
           Add reg addr -> singleton . fromJust $ semanticsM instrCode readKey writeKey
-          Jump offset -> singleton $
-              modify $ \state ->
-                state { instructionCounter =
-                            instructionCounter state + (fromIntegral offset)
-                      }
+          Jump offset -> singleton . fromJust $ semanticsM instrCode readKey writeKey
           JumpZero offset -> let isZero = SEq ((Map.!) (flags state) Zero) (SConst 0) in
           -- The computation branches and we return a list of two possible states:
                               [ modify $ \state -> -- flag 'Zero' is set and we jump
@@ -122,7 +122,7 @@ readMemory address = do
 -- ------------ Registers ---------------------------------------------------------
 -- --------------------------------------------------------------------------------
 
--- | Lookup the 'Value' in a given 'Register'. If the register has never been
+-- | Lookup the 'Val ue' in a given 'Register'. If the register has never been
 -- initialised, this function returns 0. We assume that it
 -- takes 1 clock cycles to access a register in hardware.
 readRegister :: Register -> State SymState Sym

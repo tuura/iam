@@ -15,7 +15,8 @@ import Control.Monad (join)
 import Data.SBV (Boolean (..))
 import Metalanguage
 import Machine.Types
-import Machine.Types.Value
+import Machine.Types.Value hiding (div, mod)
+import qualified Machine.Types.Value as Value (div, mod)
 import Machine.Instruction
 import Machine.Instruction.Encode
 import Machine.Instruction.Decode
@@ -223,25 +224,22 @@ mul reg addr = \read write -> Just $
 --   Applicative.
 div :: MachineValue a => Register -> MemoryAddress
                       -> Semantics Applicative MachineKey a ()
-div reg addr = \read write -> undefined
-    -- Just $
-    -- let result = Prelude.div <$> read (Reg reg) <*> read (Addr addr)
-    -- in  write (F Zero)  result *>
-    --     write (Reg reg) result
+div reg addr = \read write -> Just $
+    let result = Value.div <$> read (Reg reg) <*> read (Addr addr)
+    in  write (F Zero)  result *>
+        write (Reg reg) result
 
 mod :: MachineValue a => Register -> MemoryAddress
                       -> Semantics Applicative MachineKey a ()
-mod reg addr = \read write -> undefined
-    -- Just $
-    -- let result = Prelude.mod <$> read (Reg reg) <*> read (Addr addr)
-    -- in  write (F Zero)  result *>
-    --     write (Reg reg) result
+mod reg addr = \read write -> Just $
+    let result = Value.mod <$> read (Reg reg) <*> read (Addr addr)
+    in  write (F Zero)  result *>
+        write (Reg reg) result
 
 abs :: MachineValue a => Register -> Semantics Applicative MachineKey a ()
-abs reg = \read write -> undefined
-    -- Just $
-    -- let result = Prelude.abs <$> read (Reg reg)
-    -- in  write (Reg reg) result
+abs reg = \read write -> Just $
+    let result = Prelude.abs <$> read (Reg reg)
+    in  write (Reg reg) result
 
 -- | Unconditional jump.
 --   Functor.
@@ -253,10 +251,10 @@ jump simm read write = Just $
 --   Monadic.
 loadMI :: MachineValue a => Register -> MemoryAddress
                          -> Semantics Monad MachineKey a ()
-loadMI reg addr read write = undefined
-    -- Just $ do
-    -- addr' <- read (Addr addr)
-    -- write (Reg reg) (read (Addr addr'))
+loadMI reg addr read write = -- undefined
+    Just $ do
+    addr' <- read (Addr addr)
+    write (Reg reg) (read (Addr addr'))
 
 -- | Jump if 'Zero' flag is set.
 --   Selective.

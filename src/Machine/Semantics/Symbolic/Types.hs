@@ -15,7 +15,9 @@ import Data.Word (Word8)
 -- | Symbolic expressions
 data Sym = SAdd Sym Sym
          | SSub Sym Sym
+         | SDiv Sym Sym
          | SMod Sym Sym
+         | SAbs Sym
          | SConst Value
          | SAnd Sym Sym
          | SOr Sym Sym
@@ -29,7 +31,9 @@ data Sym = SAdd Sym Sym
 instance Show Sym where
     show (SAdd x y) = "(" <> show x <> " + " <> show y <> ")"
     show (SSub x y) = "(" <> show x <> " - " <> show y <> ")"
+    show (SDiv x y) = "(" <> show x <> " / " <> show y <> ")"
     show (SMod x y) = "(" <> show x <> " % " <> show y <> ")"
+    show (SAbs x  ) = "|" <> show x <> "|"
     show (SConst x) = show x
     show (SAnd x y) = "(" <> show x <> " & " <> show y <> ")"
     show (SOr  x y) = "(" <> show x <> " | " <> show y <> ")"
