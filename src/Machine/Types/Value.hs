@@ -16,6 +16,7 @@ class (Num a, Bounded a) => MachineValue a where
     div  :: a -> a -> a
     mod  :: a -> a -> a
     unsafeFromSImm8 :: SImm8 -> a
+    unsafeToBool :: a -> Bool
     -- unsafeToSImm8   :: a
 
 instance MachineValue Value where
@@ -29,6 +30,7 @@ instance MachineValue Value where
     div = Prelude.div
     mod = Prelude.mod
     unsafeFromSImm8 = fromIntegral
+    unsafeToBool v = v /= 0
 
 instance Num Sym where
     -- Ad-hoc constant folding. Helps to keep the instruction counter concrete.
@@ -54,3 +56,6 @@ instance MachineValue Sym where
     div  = SDiv
     mod  = SMod
     unsafeFromSImm8 x = SConst (fromIntegral x)
+    unsafeToBool (SConst v) = v /= 0
+    unsafeToBool _          =
+        error "Sym.MachineValue: unsafeToBool can't be defined for non-concrete values"

@@ -248,11 +248,10 @@ loadMI reg addr read write = -- undefined
 -- | Jump if 'Zero' flag is set.
 --   Selective.
 jumpZero :: MachineValue a => SImm8 -> Semantics Selective MachineKey a ()
-jumpZero simm read write = undefined
-    -- Just $
-    -- ifS ((==) <$> read (F Zero) <*> pure 0)
-    --     (write IC (fmap ((+) . unsafeFromSImm8 $ simm) (read IC)))
-    --     (write IC $ read IC)
+jumpZero simm read write = Just $
+    ifS (unsafeToBool <$> (eq <$> read (F Zero) <*> pure 0))
+        (write IC (fmap ((+) . unsafeFromSImm8 $ simm) (read IC)))
+        (write IC $ read IC)
 --------------------------------------------------------------------------------
 executeInstruction :: Semantics Monad MachineKey Value ()
 executeInstruction = \read write -> Just $ do
