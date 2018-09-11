@@ -14,6 +14,7 @@ library
   hs-source-dirs:      src
   exposed-modules:     Metalanguage
                      , Machine.Types
+                     , Machine.Types.Value
                      , Machine.Instruction
                      , Machine.Instruction.Decode
                      , Machine.Instruction.Encode
@@ -21,6 +22,8 @@ library
                      , Machine.Program
                      , Machine.Semantics
                      , Machine.Semantics.Simulate
+                     , Machine.Semantics.Symbolic
+                     , Machine.Semantics.Symbolic.Types
                      , Machine.Semantics.Dependencies
                      , Machine.Semantics.Oracle
                      , Machine.Examples.Common
@@ -41,6 +44,7 @@ test-suite test-programs
   type:               exitcode-stdio-1.0
   main-is:            Main.hs
   other-modules:      Machine.Test.Add
+                    , Machine.Test.GCD
   build-depends:      iam
                     , base >= 4.7 && < 5
                     , containers   >= 0.5.7.1
