@@ -28,13 +28,19 @@ import Control.Selective
 -- 'addr' is the memory address type
 -- 'iaddr' is the instruction address type
 -- 'flag' is the flag type
-data MachineKey = Reg Register      -- register
-                | Addr MemoryAddress  -- memory address
-                | F    Flag  -- flag
-                | IC         -- instruction counter
-                | IR         -- instruction register
-                | Prog InstructionAddress -- program memory address
-    deriving (Show, Eq, Ord)
+data MachineKey where
+    Reg  :: Register -> MachineKey
+    -- ^ register
+    Addr :: MemoryAddress -> MachineKey
+    -- ^ memory address
+    F    :: Flag -> MachineKey
+    -- ^ flag
+    IC   :: MachineKey
+    -- ^ instruction counter
+    IR   :: MachineKey
+    -- ^ instruction register
+    Prog :: InstructionAddress -> MachineKey
+    -- ^ program memory address
 
 -- | We amend the standard 'Monad' constraint to include 'Selective' into
 --   the hierarchy
@@ -257,5 +263,4 @@ executeInstruction = \read write -> Just $ do
     write IC (pure $ ic + 1)
     -- read instruction register and execute the instruction
     i <- read IR
-    fromJust $ semanticsM i read write
-
+    fromJust $ semanticsM (decode i) read write
