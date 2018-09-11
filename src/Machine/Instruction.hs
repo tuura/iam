@@ -13,13 +13,14 @@ data Instruction = Halt
                  | Set      Register SImm8
                  | Store    Register MemoryAddress
                  | Add      Register MemoryAddress
-                 | Jump     SImm8
-                 | JumpZero SImm8
                  | Sub      Register MemoryAddress
                  | Mul      Register MemoryAddress
                  | Div      Register MemoryAddress
                  | Mod      Register MemoryAddress
                  | Abs      Register
+                 | Jump     SImm8
+                 | JumpZero SImm8
+
     deriving (Show, Read, Eq, Ord)
 
 -- | Programs are stored in program memory.

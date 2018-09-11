@@ -43,99 +43,82 @@ type Monad m = (Selective m, Prelude.Monad m)
 -- | Functorial semantics is data independent and may have a most one
 --   static dependency. May be used for
 --   static analysis.
-semanticsF :: MachineValue a => InstructionCode
+semanticsF :: MachineValue a => Instruction
                              -> Semantics Functor MachineKey a ()
-semanticsF code =
-    let expandedCode = blastLE code
-        opcode = take 6 expandedCode
-    in if | opcode == [false, false, false, false, false, false] -> haltF
-          | opcode == [false, false, false, false, false, true]  ->
-                load (decodeRegister . extractRegister $ expandedCode)
-                     (fromBitsLE $ extractMemoryAddress expandedCode)
-          | opcode == [false, false, false, false, true, false]   ->
-                const (const Nothing)
-          | opcode == [false, false, false, false, true, true]  ->
-                setF (decodeRegister . extractRegister $ expandedCode)
-                     (fromBitsLE $ extractSImm8 expandedCode)
-          | opcode == [false, false, false, true, false, false]   ->
-                store (decodeRegister . extractRegister $ expandedCode)
-                      (fromBitsLE $ extractMemoryAddress expandedCode)
-          | opcode == [false, false, false, true, false, true]   ->
-                const (const Nothing)
-          | opcode == [false, false, false, true, true, false]   ->
-                jump (fromBitsLE $ extractSImm8Jump expandedCode)
-          | opcode == [false, false, false, true, true, true]    ->
-                const (const Nothing)
+semanticsF = \case
+    Halt           -> haltF
+    Load reg addr  -> load reg addr
+    LoadMI _ _     -> const (const Nothing)
+    Set reg simm8  -> setF reg simm8
+    Store reg addr -> store reg addr
+    Add _ _        -> const (const Nothing)
+    Sub _ _        -> const (const Nothing)
+    Mul _ _        -> const (const Nothing)
+    Div _ _        -> const (const Nothing)
+    Mod _ _        -> const (const Nothing)
+    Abs reg        -> abs reg
+    Jump simm8     -> jump simm8
+    JumpZero simm8 -> const (const Nothing)
 
 -- | Applicative semantics is data independent. May be used for
 --   static code analysis.
 --
 --   Note: applicative semantics cannot interact with flags.
-semanticsA :: MachineValue a => InstructionCode
+semanticsA :: MachineValue a => Instruction
                              -> Semantics Applicative MachineKey a ()
-semanticsA code =
-    let expandedCode = blastLE code
-        opcode = take 6 expandedCode
-    in if | opcode == [false, false, false, false, false, false] -> haltA
-          | opcode == [false, false, false, false, false, true]  ->
-                load (decodeRegister . extractRegister $ expandedCode)
-                     (fromBitsLE $ extractMemoryAddress expandedCode)
-          | opcode == [false, false, false, false, true, false]   ->
-                const (const Nothing)
-          | opcode == [false, false, false, false, true, true]  ->
-                setA (decodeRegister . extractRegister $ expandedCode)
-                     (fromBitsLE $ extractSImm8 expandedCode)
-          | opcode == [false, false, false, true, false, false]   ->
-                store (decodeRegister . extractRegister $ expandedCode)
-                      (fromBitsLE $ extractMemoryAddress expandedCode)
-          | opcode == [false, false, false, true, false, true]   ->
-                add (decodeRegister . extractRegister $ expandedCode)
-                    (fromBitsLE $ extractMemoryAddress expandedCode)
-          | opcode == [false, false, false, true, true, false]   ->
-                jump (fromBitsLE $ extractSImm8Jump expandedCode)
-          | opcode == [false, false, false, true, true, true]    ->
-                const (const Nothing)
-          | opcode == [false, false, true, false, false, false]    ->
-                sub (decodeRegister . extractRegister $ expandedCode)
-                    (fromBitsLE $ extractMemoryAddress expandedCode)
-          | opcode == [false, false, true, false, false, true]    ->
-                mul (decodeRegister . extractRegister $ expandedCode)
-                    (fromBitsLE $ extractMemoryAddress expandedCode)
-          | opcode == [false, false, true, false, true, false]    ->
-                div (decodeRegister . extractRegister $ expandedCode)
-                            (fromBitsLE $ extractMemoryAddress expandedCode)
-          | opcode == [false, false, true, false, true, true]    ->
-                mod (decodeRegister . extractRegister $ expandedCode)
-                            (fromBitsLE $ extractMemoryAddress expandedCode)
-          | opcode == [false, false, true, true, false, false]    ->
-                abs (decodeRegister . extractRegister $ expandedCode)
+semanticsA i = case i of
+    Halt           -> haltA
+    Load   _ _     -> semanticsF i
+    LoadMI _ _     -> const (const Nothing)
+    Set reg simm8  -> setA reg simm8
+    Store  _ _     -> semanticsF i
+    Add reg addr   -> add reg addr
+    Sub reg addr   -> sub reg addr
+    Mul reg addr   -> mul reg addr
+    Div reg addr   -> div reg addr
+    Mod reg addr   -> mod reg addr
+    Abs _          -> semanticsF i
+    Jump _         -> semanticsF i
+    JumpZero simm8 -> const (const Nothing)
 
-semanticsS :: MachineValue a => InstructionCode
+semanticsS :: MachineValue a => Instruction
                              -> Semantics Selective MachineKey a ()
-semanticsS code =
-    let expandedCode = blastLE code
-        opcode = take 6 expandedCode
-    in if | opcode == [false, false, false, true, true, true]    ->
-                jumpZero (fromBitsLE $ extractSImm8Jump expandedCode)
-          | opcode == [false, false, false, true, false, true]   ->
-                addS (decodeRegister . extractRegister $ expandedCode)
-                     (fromBitsLE $ extractMemoryAddress expandedCode)
-          | otherwise -> semanticsA code
+semanticsS i = case i of
+    Halt           -> semanticsA i
+    Load   _ _     -> semanticsA i
+    LoadMI _ _     -> const (const Nothing)
+    Set reg simm8  -> setA reg simm8
+    Store  _ _     -> semanticsA i
+    Add reg addr   -> addS reg addr
+    Sub reg addr   -> semanticsA i
+    Mul reg addr   -> semanticsA i
+    Div reg addr   -> semanticsA i
+    Mod reg addr   -> semanticsA i
+    Abs _          -> semanticsA i
+    Jump _         -> semanticsA i
+    JumpZero simm8 -> jumpZero simm8
 
 -- | Monadic semantics may involve data dynamic analysis and must be executed
 --   on a concrete machine state.
 --
 --   Note: Indirect memory access ('LoadMI') and conditional jump ('JumpZero')
 --   instruction may be only assigned monadic semantics.
-semanticsM :: MachineValue a => InstructionCode
+semanticsM :: MachineValue a => Instruction
                              -> Semantics Monad MachineKey a ()
-semanticsM code =
-    let expandedCode = blastLE code
-        opcode = take 6 expandedCode
-    in if | opcode == [false, false, false, false, true, false]   ->
-                loadMI (decodeRegister . extractRegister $ expandedCode)
-                       (fromBitsLE $ extractMemoryAddress expandedCode)
-          | otherwise -> semanticsS code
+semanticsM i = case i of
+    Halt            -> semanticsS i
+    Load   _ _      -> semanticsS i
+    LoadMI reg addr -> loadMI reg addr
+    Set reg simm8   -> setA reg simm8
+    Store  _ _      -> semanticsS i
+    Add reg addr    -> addS reg addr
+    Sub reg addr    -> semanticsS i
+    Mul reg addr    -> semanticsS i
+    Div reg addr    -> semanticsS i
+    Mod reg addr    -> semanticsS i
+    Abs _           -> semanticsS i
+    Jump _          -> semanticsS i
+    JumpZero simm8  -> jumpZero simm8
 
 -- | Halt the execution.
 --   Functor.
@@ -236,7 +219,7 @@ mod reg addr = \read write -> Just $
     in  write (F Zero)  result *>
         write (Reg reg) result
 
-abs :: MachineValue a => Register -> Semantics Applicative MachineKey a ()
+abs :: MachineValue a => Register -> Semantics Functor MachineKey a ()
 abs reg = \read write -> Just $
     let result = Prelude.abs <$> read (Reg reg)
     in  write (Reg reg) result
