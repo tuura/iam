@@ -34,8 +34,9 @@ readKey = \case
     Addr addr -> readMemory   addr
     F    flag -> readFlag     flag
     IC        -> SConst . instructionCounter <$> get -- error "Machine.Semantics.Symbolic: Can't read IC"
-    IR        -> error "Machine.Semantics.Symbolic: Can't read IR" -- readInstructionRegister
-    Prog addr -> error "Machine.Semantics.Symbolic: Can't read Program" -- readProgram addr
+    IR        -> SConst <$> readInstructionRegister
+        -- error "Machine.Semantics.Symbolic: Can't read IR" -- readInstructionRegister
+    Prog addr -> SConst <$> readProgram addr
 
 -- | Instance of the Machine.Metalanguage write command for symbolic execution
 writeKey :: MachineKey
@@ -45,13 +46,13 @@ writeKey k v = case k of
     Reg  reg  -> v >>= writeRegister reg
     Addr addr -> v >>= writeMemory   addr
     F    flag -> v >>= writeFlag flag
-    IC        -> do
-        ic' <- v
-        case ic' of
-            (SConst val) -> modify $ \currentState -> currentState {instructionCounter = val}
-            _ -> error "Machine.Semantics.Symbolic.writeKey: symbolic IC is not supported"
-    IR        -> error "Machine.Semantics.Symbolic: Can't write IR"
-    Prog addr -> error "Machine.Semantics.Symbolic: Can't write Program"
+    IC        -> v >>= \case
+        (SConst val) -> modify $ \currentState -> currentState {instructionCounter = val}
+        _ -> error "Machine.Semantics.Symbolic.writeKey: symbolic IC is not supported"
+    IR        -> v >>= \case
+        (SConst val) -> writeInstructionRegister val
+        _ -> error "Machine.Semantics.Symbolic.writeKey: symbolic IR is not supported"
+    Prog _    -> error "Machine.Semantics.Symbolic: Can't write Program"
 
 symStep :: SymState -> [SymState]
 symStep state =
@@ -59,31 +60,28 @@ symStep state =
                                     fetchInstruction
                                     incrementInstructionCounter
                                     readInstructionRegister
-    in (snd . ((flip runState) fetched)) <$> case decode instrCode of
-          Halt ->           singleton . fromJust $ semanticsM instrCode readKey writeKey
-          Load reg addr ->  singleton . fromJust $ semanticsM instrCode readKey writeKey
+        i = decode instrCode
+    in (snd . ((flip runState) fetched)) <$> case i of
+          Halt ->           singleton . fromJust $ semanticsM i readKey writeKey
+          Load reg addr ->  singleton . fromJust $ semanticsM i readKey writeKey
           LoadMI _ _ ->     error "LoadMI semantics not implemented."
-          Set reg value ->  singleton . fromJust $ semanticsM instrCode readKey writeKey
+          Set reg value ->  singleton . fromJust $ semanticsM i readKey writeKey
           Store reg addr -> singleton $
               readRegister reg >>= writeMemory addr
-          Add reg addr -> singleton . fromJust $ semanticsM instrCode readKey writeKey
-          Jump offset -> singleton . fromJust $ semanticsM instrCode readKey writeKey
-          JumpZero offset -> let isZero = SEq ((Map.!) (flags state) Zero) (SConst 0) in
-          -- The computation branches and we return a list of two possible states:
-                              [ modify $ \state -> -- flag 'Zero' is set and we jump
-                                  state { instructionCounter =
-                                             instructionCounter state + (fromIntegral offset)
-                                        , pathConstraintList = isZero : pathConstraintList state
-                                        }
-                              , modify $ \state -> -- otherwise we don't jump
-                                  state { pathConstraintList = SNot isZero : pathConstraintList state
-                                        }
-                              ]
-          Sub reg addr -> singleton . fromJust $ semanticsM instrCode readKey writeKey
-          Mod reg addr -> singleton . fromJust $ semanticsM instrCode readKey writeKey
-          Mul reg addr -> singleton . fromJust $ semanticsM instrCode readKey writeKey
-          Div reg addr -> singleton . fromJust $ semanticsM instrCode readKey writeKey
-          Abs reg      -> singleton . fromJust $ semanticsM instrCode readKey writeKey
+          Add reg addr -> singleton . fromJust $ semanticsM i readKey writeKey
+          Jump offset -> singleton . fromJust $ semanticsM i readKey writeKey
+          JumpZero offset ->
+            let isZero = SEq ((Map.!) (flags state) Zero) (SConst 0)
+            -- The computation branches and we return a list of two possible states:
+            in [ do appendConstraint isZero
+                    fromJust $ semanticsM (Jump offset) readKey writeKey
+               , appendConstraint (SNot isZero)
+               ]
+          Sub reg addr -> singleton . fromJust $ semanticsM i readKey writeKey
+          Mod reg addr -> singleton . fromJust $ semanticsM i readKey writeKey
+          Mul reg addr -> singleton . fromJust $ semanticsM i readKey writeKey
+          Div reg addr -> singleton . fromJust $ semanticsM i readKey writeKey
+          Abs reg      -> singleton . fromJust $ semanticsM i readKey writeKey
     where singleton x = [x]
 
 --------------------------------------------------------------------------------
@@ -179,10 +177,18 @@ readProgram addr = do
     delay 1
     pure . snd $ (!!) (program currentState) (fromIntegral addr)
 
-readInstructionRegister :: State SymState (InstructionCode)
+readInstructionRegister :: State SymState InstructionCode
 readInstructionRegister = instructionRegister <$> get
 
-writeInstructionRegister :: (InstructionCode) -> State SymState ()
+writeInstructionRegister :: InstructionCode -> State SymState ()
 writeInstructionRegister instruction =
     modify $ \currentState ->
         currentState {instructionRegister = instruction}
+
+--------------------------------------------------------------------------------
+-------------- Path Constraints ------------------------------------------------
+--------------------------------------------------------------------------------
+
+appendConstraint :: Sym -> State SymState ()
+appendConstraint c = modify $ \state ->
+    state { pathConstraintList = c : pathConstraintList state }
