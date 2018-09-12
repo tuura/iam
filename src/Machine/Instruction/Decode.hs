@@ -6,6 +6,7 @@ import Machine.Types
 import Machine.Instruction
 import Data.Word (Word16)
 import Data.Maybe (fromJust)
+import Data.Monoid ((<>))
 
 decode :: InstructionCode -> Instruction
 decode code =
@@ -49,14 +50,18 @@ decode code =
             t = True
 
 decodeRegister :: [Bool] -> Register
-decodeRegister code | code == [False, False] = R0
-                    | code == [False, True]  = R1
-                    | code == [True, False]  = R2
-                    | code == [True, True]   = R3
+decodeRegister = \case
+      [False, False] -> R0
+      [False, True]  -> R1
+      [True, False]  -> R2
+      [True, True]   -> R3
+      _              -> error $ "Machine.Instruction.Decode.decodeRegister:"
+                             <> "register must be encoded as a two-bit word"
 
 decodeOpcode :: [Bool] -> [Bool]
 decodeOpcode = take 6
 
+extractRegister :: [Bool] -> [Bool]
 extractRegister = take 2 . drop 6
 
 extractMemoryAddress :: [Bool] -> [Bool]
