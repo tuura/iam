@@ -53,10 +53,11 @@ encode = \case
 
 -- | 'Register' is encoded as a 2-bit word
 encodeRegister :: Register -> [Bool]
-encodeRegister r | r == R0 = [false, false]
-                 | r == R1 = [false, true]
-                 | r == R2 = [true, false]
-                 | r == R3 = [true, true]
+encodeRegister = \case
+    R0 -> [false, false]
+    R1 -> [false, true]
+    R2 -> [true, false]
+    R3 -> [true, true]
 
 -- | 'MemoryAddress' is stored in the leading 8 bits (little-endian) of a 'Value'
 encodeMemoryAddress :: MemoryAddress -> [Bool]
