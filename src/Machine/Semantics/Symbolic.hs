@@ -27,13 +27,22 @@ runModel steps state
     newStates = symStep state
     children  = runModel (steps - 1) <$> newStates
 
+runModelMerge :: Int -> SymState -> Trace
+runModelMerge steps state
+    | steps <= 0 = Tree.Node state []
+    | otherwise  = if halted then Tree.Node state [] else Tree.Node state [children]
+  where
+    halted    = (Map.!) (flags state) Halted /= (SConst 0)
+    newState = symStepMerge state
+    children  = runModelMerge (steps - 1) newState
+
 -- | Instance of the Machine.Metalanguage read command for symbolic execution
 readKey :: MachineKey -> State SymState Sym
 readKey = \case
     Reg  reg  -> readRegister reg
     Addr addr -> readMemory   addr
     F    flag -> readFlag     flag
-    IC        -> SConst . instructionCounter <$> get -- error "Machine.Semantics.Symbolic: Can't read IC"
+    IC        -> instructionCounter <$> get -- error "Machine.Semantics.Symbolic: Can't read IC"
     IR        -> SConst <$> readInstructionRegister
         -- error "Machine.Semantics.Symbolic: Can't read IR" -- readInstructionRegister
     Prog addr -> SConst <$> readProgram addr
@@ -47,8 +56,8 @@ writeKey k v = case k of
     Addr addr -> v >>= writeMemory   addr
     F    flag -> v >>= writeFlag flag
     IC        -> v >>= \case
-        (SConst val) -> modify $ \currentState -> currentState {instructionCounter = val}
-        _ -> error "Machine.Semantics.Symbolic.writeKey: symbolic IC is not supported"
+        val -> modify $ \currentState -> currentState {instructionCounter = val}
+        -- _ -> error "Machine.Semantics.Symbolic.writeKey: symbolic IC is not supported"
     IR        -> v >>= \case
         (SConst val) -> writeInstructionRegister val
         _ -> error "Machine.Semantics.Symbolic.writeKey: symbolic IR is not supported"
@@ -83,6 +92,34 @@ symStep state =
           Div reg addr -> singleton . fromJust $ semanticsM i readKey writeKey
           Abs reg      -> singleton . fromJust $ semanticsM i readKey writeKey
     where singleton x = [x]
+
+symStepMerge :: SymState -> SymState
+symStepMerge state =
+    let (instrCode, fetched) = (flip runState) state $ do
+                                    fetchInstruction
+                                    incrementInstructionCounter
+                                    readInstructionRegister
+        i = decode instrCode
+    in (snd . ((flip runState) fetched)) $ case i of
+          Halt ->           fromJust $ semanticsM i readKey writeKey
+          Load reg addr ->  fromJust $ semanticsM i readKey writeKey
+          LoadMI _ _ ->     error "LoadMI semantics not implemented."
+          Set reg value ->  fromJust $ semanticsM i readKey writeKey
+          Store reg addr -> fromJust $ semanticsM i readKey writeKey
+          Add reg addr -> fromJust $ semanticsM i readKey writeKey
+          Jump offset -> fromJust $ semanticsM i readKey writeKey
+          JumpZero offset -> fromJust $ semanticsM i readKey writeKey -- undefined
+        --     let isZero = SEq ((Map.!) (flags state) Zero) (SConst 0)
+        --     -- The computation branches and we return a list of two possible states:
+        --     in [ do appendConstraint isZero
+        --             fromJust $ semanticsM (Jump offset) readKey writeKey
+        --        , appendConstraint (SNot isZero)
+        --        ]
+          Sub reg addr -> fromJust $ semanticsM i readKey writeKey
+          Mod reg addr -> fromJust $ semanticsM i readKey writeKey
+          Mul reg addr -> fromJust $ semanticsM i readKey writeKey
+          Div reg addr -> fromJust $ semanticsM i readKey writeKey
+          Abs reg      -> fromJust $ semanticsM i readKey writeKey
 
 --------------------------------------------------------------------------------
 ------------ Clock -------------------------------------------------------------
@@ -168,8 +205,11 @@ incrementInstructionCounter =
         currentState {instructionCounter = instructionCounter currentState + 1}
 
 fetchInstruction :: State SymState ()
-fetchInstruction =
-    get >>= readProgram . instructionCounter >>= writeInstructionRegister
+fetchInstruction = do
+    ic <- instructionCounter <$> get
+    case ic of
+        SConst v -> readProgram v >>= writeInstructionRegister
+        _        -> error "Machine.Semantics.Symbolic.writeKey: symbolic IC is not supported"
 
 readProgram :: InstructionAddress -> State SymState (InstructionCode)
 readProgram addr = do
