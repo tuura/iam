@@ -72,14 +72,14 @@ jzExample = do
 gcdExample :: IO ()
 gcdExample = do
     let prog = unsafePerformIO . readProgram $ "examples/gcd.asm"
-        steps = 50
+        steps = 10
         -- x = SConst 2 -- SAny 0
         -- y = SConst 3 -- SAny 1
-        x = SAny 42
-        y = SAny 24
+        x = SAny 0
+        y = SAny 1
         mem = initialiseMemory [(0, x), (1, y)]
         initialState = boot prog mem
-        trace = runModel steps initialState
+        trace = runModelMerge steps initialState
     putStrLn $ Tree.drawTree $ fmap show $ trace
 
 gcdExampleSMT :: IO ()

@@ -57,5 +57,5 @@ instance MachineValue Sym where
     mod  = SMod
     unsafeFromSImm8 x = SConst (fromIntegral x)
     unsafeToBool (SConst v) = v /= 0
-    unsafeToBool _          =
+    unsafeToBool _          = SNot (SEq v 0)
         error "Sym.MachineValue: unsafeToBool can't be defined for non-concrete values"
