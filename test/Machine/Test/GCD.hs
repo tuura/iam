@@ -13,7 +13,7 @@ import Machine.Instruction
 import Machine.Instruction.Encode
 import Machine.Instruction.Decode
 import Machine.Program
-import Machine.Semantics.Simulate
+import Machine.Semantics.SimulateITE
 
 --------------------------------------------------------------------------------
 prog :: Program

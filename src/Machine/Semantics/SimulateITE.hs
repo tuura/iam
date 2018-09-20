@@ -1,6 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 
-module Machine.Semantics.Simulate (
+module Machine.Semantics.SimulateITE (
     -- * State of IAM machine
     MachineState (..),
 
@@ -19,7 +19,7 @@ import qualified Data.Map.Strict as Map
 import Machine.Types
 import Machine.Instruction
 import Machine.Program hiding (readProgram)
-import Machine.Semantics
+import Machine.SemanticsITE
 
 -- | The state of a Iam machine
 data MachineState = MachineState
@@ -64,7 +64,7 @@ runModel steps state
     | otherwise  = if halted then state else runModel (steps - 1) nextState
   where
     halted    = (Map.!) (flags state) Halted /= 0
-    nextState = case (executeInstruction readKey writeKey) of
+    nextState = case (executeInstruction readKey writeKey ite) of
                     Just action -> snd $ runState action state
                     Nothing     -> error "incorrect instruction semantics"
 

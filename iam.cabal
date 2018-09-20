@@ -13,6 +13,7 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     Metalanguage
+                     , MetalanguageITE
                      , Machine.Types
                      , Machine.Types.Value
                      , Machine.Instruction
@@ -21,7 +22,9 @@ library
                      , Machine.Assembly
                      , Machine.Program
                      , Machine.Semantics
+                     , Machine.SemanticsITE
                      , Machine.Semantics.Simulate
+                     , Machine.Semantics.SimulateITE
                      , Machine.Semantics.Symbolic
                      , Machine.Semantics.Symbolic.Types
                      , Machine.Semantics.Dependencies

@@ -1,6 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 
-module Machine.Semantics.Symbolic where
+module Machine.Semantics.SymbolicITE where
 
 
 import qualified Data.Tree as Tree
@@ -14,7 +14,7 @@ import Machine.Types.Value
 import Machine.Instruction
 import Machine.Instruction.Decode
 import Machine.Instruction.Encode
-import Machine.Semantics
+import Machine.SemanticsITE
 import Machine.Program hiding (readProgram)
 import Machine.Semantics.Symbolic.Types
 
@@ -58,8 +58,9 @@ ite :: State SymState Sym -> State SymState () -> State SymState ()
     -> State SymState ()
 ite i t e = do
     rawCondition <- i
-    let condition = rawCondition /= 0
-    if condition then t else e
+    let condition = SNot (SEq rawCondition 0)
+    appendConstraint condition
+
 
 symStep :: SymState -> [SymState]
 symStep state =
@@ -69,26 +70,26 @@ symStep state =
                                     readInstructionRegister
         i = decode instrCode
     in (snd . ((flip runState) fetched)) <$> case i of
-          Halt ->           singleton . fromJust $ semanticsM i readKey writeKey
-          Load reg addr ->  singleton . fromJust $ semanticsM i readKey writeKey
+          Halt ->           singleton . fromJust $ semanticsM i readKey writeKey ite
+          Load reg addr ->  singleton . fromJust $ semanticsM i readKey writeKey ite
           LoadMI _ _ ->     error "LoadMI semantics not implemented."
-          Set reg value ->  singleton . fromJust $ semanticsM i readKey writeKey
+          Set reg value ->  singleton . fromJust $ semanticsM i readKey writeKey ite
           Store reg addr -> singleton $
               readRegister reg >>= writeMemory addr
-          Add reg addr -> singleton . fromJust $ semanticsM i readKey writeKey
-          Jump offset -> singleton . fromJust $ semanticsM i readKey writeKey
-          JumpZero offset ->
-            let isZero = SEq ((Map.!) (flags state) Zero) (SConst 0)
-            -- The computation branches and we return a list of two possible states:
-            in [ do appendConstraint isZero
-                    fromJust $ semanticsM (Jump offset) readKey writeKey
-               , appendConstraint (SNot isZero)
-               ]
-          Sub reg addr -> singleton . fromJust $ semanticsM i readKey writeKey
-          Mod reg addr -> singleton . fromJust $ semanticsM i readKey writeKey
-          Mul reg addr -> singleton . fromJust $ semanticsM i readKey writeKey
-          Div reg addr -> singleton . fromJust $ semanticsM i readKey writeKey
-          Abs reg      -> singleton . fromJust $ semanticsM i readKey writeKey
+          Add reg addr -> singleton . fromJust $ semanticsM i readKey writeKey ite
+          Jump offset -> singleton . fromJust $ semanticsM i readKey writeKey ite
+          JumpZero offset -> singleton . fromJust $ semanticsM i readKey writeKey ite
+            -- let isZero = SEq ((Map.!) (flags state) Zero) (SConst 0)
+            -- -- The computation branches and we return a list of two possible states:
+            -- in [ do appendConstraint isZero
+            --         fromJust $ semanticsM (Jump offset) readKey writeKey ite
+            --    , appendConstraint (SNot isZero)
+            --    ]
+          Sub reg addr -> singleton . fromJust $ semanticsM i readKey writeKey ite
+          Mod reg addr -> singleton . fromJust $ semanticsM i readKey writeKey ite
+          Mul reg addr -> singleton . fromJust $ semanticsM i readKey writeKey ite
+          Div reg addr -> singleton . fromJust $ semanticsM i readKey writeKey ite
+          Abs reg      -> singleton . fromJust $ semanticsM i readKey writeKey ite
     where singleton x = [x]
 
 --------------------------------------------------------------------------------
