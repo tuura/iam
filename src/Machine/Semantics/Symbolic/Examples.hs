@@ -10,7 +10,7 @@ import Machine.Instruction.Encode
 import Machine.Program
 import Machine.Types
 import Machine.Semantics.Symbolic.Types
-import Machine.Semantics.SymbolicITE hiding (readProgram)
+import Machine.Semantics.Symbolic hiding (readProgram)
 import Machine.Semantics.Symbolic.SMT
 
 assemble :: [Instruction] -> Program

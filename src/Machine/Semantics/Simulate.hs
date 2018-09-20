@@ -64,9 +64,13 @@ runModel steps state
     | otherwise  = if halted then state else runModel (steps - 1) nextState
   where
     halted    = (Map.!) (flags state) Halted /= 0
-    nextState = case (executeInstruction readKey writeKey) of
-                    Just action -> snd $ runState action state
-                    Nothing     -> error "incorrect instruction semantics"
+    nextState = case executeInstruction readKey writeKey of
+                    [t, f] ->
+                        let isZero = (==) ((Map.!) (flags state) Zero) 0
+                        in if isZero then snd $ runState t state
+                                     else snd $ runState f state
+                    [action] -> snd $ runState action state
+                    []       -> error "incorrect instruction semantics"
 
 -- | Instance of the Machine.Metalanguage read command for symbolic execution
 readKey :: MachineKey
@@ -92,13 +96,6 @@ writeKey k v = case k of
         modify $ \currentState -> currentState {instructionCounter = ic'}
     IR        -> v >>= writeInstructionRegister
     Prog addr -> error "Machine.Semantics.Symbolic: Can't write Program"
-
-ite :: State MachineState Value -> State MachineState () -> State MachineState ()
-    -> State MachineState ()
-ite i t e = do
-    rawCondition <- i
-    let condition = rawCondition /= 0
-    if condition then t else e
 
 --------------------------------------------------------------------------------
 ------------ Clock -------------------------------------------------------------

@@ -8,9 +8,11 @@ import Machine.Types
 import Machine.Semantics.Symbolic.Types
 
 class (Num a, Bounded a) => MachineValue a where
+    true :: a
     eq   :: a -> a -> a
     gt   :: a -> a -> a
     lt   :: a -> a -> a
+    not  :: a -> a
     and  :: a -> a -> a
     or   :: a -> a -> a
     div  :: a -> a -> a
@@ -20,13 +22,16 @@ class (Num a, Bounded a) => MachineValue a where
     -- unsafeToSImm8   :: a
 
 instance MachineValue Value where
+    true     = 1
     eq  x y  = if (x == y) then 1 else 0
     lt  x y  = if (x <  y) then 1 else 0
     gt  x y  = if (x >  y) then 1 else 0
-    and x y  = case x > 0 && y > 0 of True  -> 1
-                                      False -> 0
-    or x y   = case x > 0 || y > 0 of True  -> 1
-                                      False -> 0
+    not x    = case x /= 0 of True  -> 0
+                              False -> 1
+    and x y  = case x /= 0 && y /= 0 of True  -> 1
+                                        False -> 0
+    or x y   = case x /= 0 || y /= 0 of True  -> 1
+                                        False -> 0
     div = Prelude.div
     mod = Prelude.mod
     unsafeFromSImm8 = fromIntegral
@@ -48,9 +53,11 @@ instance Bounded Sym where
     minBound = SConst minBound
 
 instance MachineValue Sym where
+    true = SConst 1
     eq   = SEq
     lt   = SLt
     gt   = SGt
+    not  = SNot
     and  = SAnd
     or   = SOr
     div  = SDiv

@@ -54,13 +54,6 @@ writeKey k v = case k of
         _ -> error "Machine.Semantics.Symbolic.writeKey: symbolic IR is not supported"
     Prog _    -> error "Machine.Semantics.Symbolic: Can't write Program"
 
-ite :: State SymState Sym -> State SymState () -> State SymState ()
-    -> State SymState ()
-ite i t e = do
-    rawCondition <- i
-    let condition = rawCondition /= 0
-    if condition then t else e
-
 symStep :: SymState -> [SymState]
 symStep state =
     let (instrCode, fetched) = (flip runState) state $ do
@@ -69,27 +62,25 @@ symStep state =
                                     readInstructionRegister
         i = decode instrCode
     in (snd . ((flip runState) fetched)) <$> case i of
-          Halt ->           singleton . fromJust $ semanticsM i readKey writeKey
-          Load reg addr ->  singleton . fromJust $ semanticsM i readKey writeKey
+          Halt ->           semanticsM i readKey writeKey
+          Load reg addr ->  semanticsM i readKey writeKey
           LoadMI _ _ ->     error "LoadMI semantics not implemented."
-          Set reg value ->  singleton . fromJust $ semanticsM i readKey writeKey
-          Store reg addr -> singleton $
-              readRegister reg >>= writeMemory addr
-          Add reg addr -> singleton . fromJust $ semanticsM i readKey writeKey
-          Jump offset -> singleton . fromJust $ semanticsM i readKey writeKey
+          Set reg value ->  semanticsM i readKey writeKey
+          Store reg addr -> semanticsM i readKey writeKey
+          Add reg addr -> semanticsM i readKey writeKey
+          Jump offset -> semanticsM i readKey writeKey
           JumpZero offset ->
-            let isZero = SEq ((Map.!) (flags state) Zero) (SConst 0)
+            let [t, f] = semanticsM i readKey writeKey
+                isZero = SEq ((Map.!) (flags state) Zero) (SConst 0)
             -- The computation branches and we return a list of two possible states:
-            in [ do appendConstraint isZero
-                    fromJust $ semanticsM (Jump offset) readKey writeKey
-               , appendConstraint (SNot isZero)
+            in [ appendConstraint isZero *> t
+               , appendConstraint (SNot isZero) *> f
                ]
-          Sub reg addr -> singleton . fromJust $ semanticsM i readKey writeKey
-          Mod reg addr -> singleton . fromJust $ semanticsM i readKey writeKey
-          Mul reg addr -> singleton . fromJust $ semanticsM i readKey writeKey
-          Div reg addr -> singleton . fromJust $ semanticsM i readKey writeKey
-          Abs reg      -> singleton . fromJust $ semanticsM i readKey writeKey
-    where singleton x = [x]
+          Sub reg addr -> semanticsM i readKey writeKey
+          Mod reg addr -> semanticsM i readKey writeKey
+          Mul reg addr -> semanticsM i readKey writeKey
+          Div reg addr -> semanticsM i readKey writeKey
+          Abs reg      -> semanticsM i readKey writeKey
 
 --------------------------------------------------------------------------------
 ------------ Clock -------------------------------------------------------------
