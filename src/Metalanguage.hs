@@ -3,7 +3,7 @@
              FlexibleInstances #-}
 
 module Metalanguage (
-    Semantics
+    Semantics, SemanticsV, SemanticsITE
     ) where
 
 -- | The 'Semantics' data type is a polymorphic state-transformer metalanguage
@@ -24,3 +24,12 @@ module Metalanguage (
 type Semantics c k v a = forall f. c f => (k -> f v) ->
                                           (k -> f v -> f ()) ->
                                           Maybe (f a)
+
+type SemanticsV c k v a = forall f. c f => (k -> f v) ->
+                                           (k -> f v -> f v) ->
+                                           Maybe (f a)
+
+type SemanticsITE c k v a = forall f. c f => (k -> f v) ->
+                                             (k -> f v -> f ()) ->
+                                             (f v -> f () -> f () -> f ()) ->
+                                             Maybe (f a)

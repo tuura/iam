@@ -4,7 +4,10 @@
              FlexibleInstances,
              TypeApplications,
              TypeFamilies,
-             MultiWayIf #-}
+             GADTs,
+             StandaloneDeriving,
+             MultiWayIf,
+             LambdaCase #-}
 
 module Machine.Semantics where
 
@@ -41,6 +44,8 @@ data MachineKey where
     -- ^ instruction register
     Prog :: InstructionAddress -> MachineKey
     -- ^ program memory address
+
+deriving instance Show MachineKey
 
 -- | We amend the standard 'Monad' constraint to include 'Selective' into
 --   the hierarchy
@@ -175,6 +180,25 @@ add reg addr = \read write -> Just $
     in  write (F Zero)  result *>
         write (Reg reg) result
 
+
+-- | Add a value from memory location to one in a register.
+--   Applicative.
+addV :: MachineValue v => Register -> MemoryAddress
+                       -> SemanticsV Applicative MachineKey v ()
+addV reg addr = \read write -> Just $
+    let void :: a -> ()
+        void _ = ()
+
+        -- write1 :: MachineValue v => MachineKey -> f v -> f ()
+        write1 k v = void <$> write k v
+
+        -- write2 :: MachineValue v => MachineKey -> MachineKey -> f v -> f ()
+        -- write2 k1 k2 v = write1 k1 (write k2 v)
+        write2 k1 k2 v = void <$> write k1 (write k2 v)
+
+        result = (+) <$> read (Reg reg) <*> read (Addr addr)
+    in  write2 (F Zero) (Reg reg) result
+
 -- | Add a value from memory location to one in a register. Tracks overflow.
 --   Selective.
 addS :: MachineValue a => Register -> MemoryAddress -> Semantics Selective MachineKey a ()
@@ -240,10 +264,10 @@ jump simm read write = Just $
 --   Monadic.
 loadMI :: MachineValue a => Register -> MemoryAddress
                          -> Semantics Monad MachineKey a ()
-loadMI reg addr read write = -- undefined
-    Just $ do
-    addr' <- read (Addr addr)
-    write (Reg reg) (read (Addr addr'))
+loadMI reg addr read write = undefined
+    -- Just $ do
+    -- addr' <- read (Addr addr)
+    -- write (Reg reg) (read (Addr addr'))
 
 -- | Jump if 'Zero' flag is set.
 --   Selective.
