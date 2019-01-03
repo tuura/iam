@@ -17,3 +17,11 @@ dependencies task =
     task trackingRead trackingWrite
   where trackingRead  k    = Const [Left k]
         trackingWrite k fv = fv *> Const [Right k]
+
+dependenciesV :: SemanticsV Applicative k v a
+             -> Maybe ([k], [k])
+dependenciesV task =
+    partitionEithers . getConst <$>
+    task trackingRead trackingWrite
+  where trackingRead  k    = Const [Left k]
+        trackingWrite k fv = fv *> Const [Right k]
