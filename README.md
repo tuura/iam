@@ -1,3 +1,5 @@
+NB: please take a look at [Fine Grained Stateful Computations](https://github.com/tuura/fine-grained-state) project, which uses a next iteration of the ideas used in this project.  
+
 # Inglorious Adding Machine
 
 Hi there! I am an Inglorious Adding Machine --- a model of a minimalistic processor
