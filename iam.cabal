@@ -1,63 +1,52 @@
-name:                iam
-synopsis:            I am an Inglorious Adding Machine
-version:             0.1.0.0
-homepage:            https://github.com/tuura/iam#readme
-author:              Georgy Lukyanov, Andrey Mokhov
-maintainer:          lukyanov.georgy@gmail.com
-copyright:           2017 Georgy Lukyanov, Andrey Mokhov
-category:            Hardware
-build-type:          Simple
-extra-source-files:  README.md
-cabal-version:       >=1.10
+-- This file has been generated from package.yaml by hpack version 0.28.2.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: cd7f9291d863ffec081145e3151209b851bd3bc6d5e47a486915897e51ae09b3
 
-library
-  hs-source-dirs:      src
-  exposed-modules:     Metalanguage
-                     , Machine.Types
-                     , Machine.Types.Value
-                     , Machine.Instruction
-                     , Machine.Instruction.Decode
-                     , Machine.Instruction.Encode
-                     , Machine.Assembly
-                     , Machine.Program
-                     , Machine.Semantics
-                     , Machine.Semantics.Simulate
-                     , Machine.Semantics.Symbolic
-                     , Machine.Semantics.Symbolic.Types
-                     , Machine.Semantics.Dependencies
-                     , Machine.Semantics.Oracle
-                     , Machine.Examples.Common
-  build-depends:       base >= 4.7 && < 5
-                     , containers   >= 0.5.7.1
-                     , mtl          >= 2.2.1
-                     , transformers >= 0.5.2.0
-                     , pretty-simple
-                     , algebraic-graphs
-                     , process
-                     , selective
-                     , sbv
-  default-language:    Haskell2010
-  ghc-options: -Wall
-               -Wincomplete-patterns
-               -Wcompat
-               -Wincomplete-record-updates
-               -Wredundant-constraints
-
-test-suite test-programs
-  hs-source-dirs:     test
-  type:               exitcode-stdio-1.0
-  main-is:            Main.hs
-  other-modules:      Machine.Test.Add
-                    , Machine.Test.GCD
-  build-depends:      iam
-                    , base >= 4.7 && < 5
-                    , containers   >= 0.5.7.1
-                    , mtl          >= 2.2.1
-                    , transformers >= 0.5.2.0
-                    , pretty-simple
-                    , smallcheck   >= 1.1.5
-  default-language:    Haskell2010
+name:           iam
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/tuura/iam#readme>
+homepage:       https://github.com/tuura/iam#readme
+bug-reports:    https://github.com/tuura/iam/issues
+author:         Georgy Lukyanov
+maintainer:     mail@egeo2a.info
+copyright:      2019 Georgy Lukyanov
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+cabal-version:  >= 1.10
+extra-source-files:
+    ChangeLog.md
+    README.md
 
 source-repository head
-  type:     git
+  type: git
   location: https://github.com/tuura/iam
+
+library
+  exposed-modules:
+      FS
+      Machine
+      Machine.Examples.Common
+      Machine.Graph
+      Machine.Instruction
+      Machine.Program
+      Machine.Simulator
+      Machine.Types
+      State
+      StateF
+  other-modules:
+      Paths_iam
+  hs-source-dirs:
+      src
+  build-depends:
+      algebraic-graphs
+    , base >=4.7 && <5
+    , containers
+    , fine-grained-state
+    , kan-extensions
+    , mtl
+    , sbv
+    , selective
+  default-language: Haskell2010

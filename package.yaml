@@ -1,0 +1,26 @@
+name:                iam
+version:             0.1.0.0
+github:              "tuura/iam"
+license:             BSD3
+author:              "Georgy Lukyanov"
+maintainer:          "mail@egeo2a.info"
+copyright:           "2019 Georgy Lukyanov"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+description:         Please see the README on GitHub at <https://github.com/tuura/iam#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+- containers
+- mtl
+- selective
+- fine-grained-state
+- algebraic-graphs
+- sbv
+- kan-extensions
+
+library:
+  source-dirs: src

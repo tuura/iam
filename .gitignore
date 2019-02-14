@@ -20,4 +20,5 @@ cabal.project.local
 .vscode
 
 *.dot
+*.svg
 *.png
