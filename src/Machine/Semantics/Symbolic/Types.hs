@@ -52,7 +52,7 @@ instance Show Sym where
 
 -- | The state of symbolic computation
 data SymState = SymState { registers         :: Map.Map Register Sym
-                         , instructionCounter :: Sym -- InstructionAddress
+                         , instructionCounter :: InstructionAddress -- Sym
                          , instructionRegister :: InstructionCode
                          , flags :: Map.Map Flag Sym
                          , memory :: Map.Map Word8 Sym
@@ -105,7 +105,7 @@ initialiseMemory vars =
 
 boot :: Program -> Map.Map Word8 Sym -> SymState
 boot prog mem = SymState { registers = emptyRegisters
-                         , instructionCounter = SConst 0
+                         , instructionCounter = 0
                          , instructionRegister = 0 -- encode $ Jump 0
                          , program = prog
                          , flags = emptyFlags
