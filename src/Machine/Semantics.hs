@@ -15,7 +15,7 @@ import Prelude hiding (Monad, read, div, mod, abs, and, or)
 import qualified Prelude (Monad, div, mod, abs)
 import Data.Maybe (fromJust)
 import Control.Monad (join)
-import Data.SBV (Boolean (..))
+import Data.SBV hiding (Boolean)
 import Metalanguage
 import Machine.Types
 import Machine.Types.Value hiding (div, mod)
@@ -206,14 +206,26 @@ addS reg addr = \read write -> Just $
     let arg1   = read (Reg reg)
         arg2   = read (Addr addr)
         result = (+) <$> read (Reg reg) <*> read (Addr addr)
-        o1 = gt <$> arg2 <*> pure 0
-        o2 = gt <$> arg1 <*> ((-) <$> pure maxBound <*> arg2)
-        o3 = lt <$> arg2 <*> pure 0
-        o4 = lt <$> arg1 <*> ((-) <$> pure minBound <*> arg2)
-        o  = or <$> (and <$> o1 <*> o2)
-                <*> (and <$> o3 <*> o4)
+        o = willOverflowPure <$> arg1 <*> arg2
+        -- o1 = gt <$> arg2 <*> pure 0
+        -- o2 = gt <$> arg1 <*> ((-) <$> pure maxBound <*> arg2)
+        -- o3 = lt <$> arg2 <*> pure 0
+        -- o4 = lt <$> arg1 <*> ((-) <$> pure minBound <*> arg2)
+        -- o  = or <$> (and <$> o1 <*> o2)
+        --         <*> (and <$> o3 <*> o4)
     in  write (F Overflow) o *>
         write (Reg reg) result
+
+-- | A pure check for integer overflow during addition.
+willOverflowPure :: MachineValue a => a -> a -> a
+willOverflowPure x y =
+    let o1 = gt y 0
+        o2 = gt x((-) maxBound y)
+        o3 = lt y 0
+        o4 = lt x((-) minBound y)
+    in  or (and o1 o2)
+           (and o3 o4)
+
 
 -- | Sub a value from memory location to one in a register.
 --   Applicative.

@@ -7,6 +7,7 @@ import Data.Monoid
 import Control.Monad.Reader (ask)
 import Control.Monad.Trans (liftIO)
 import qualified Data.SBV.Dynamic as SBV
+import Data.SBV (constrain, SBool)
 
 import Machine.Types
 import Machine.Instruction.Decode
@@ -102,7 +103,7 @@ sValToSWord :: SBV.SVal -> SBV.SVal
 sValToSWord w = SBV.svIte w (valueToSVal 1) (valueToSVal 0)
 
 renderSMTResult :: SBV.SMTResult -> String
-renderSMTResult (SBV.Unsatisfiable _) = "Unsatisfiable"
+renderSMTResult (SBV.Unsatisfiable _ _) = "Unsatisfiable"
 renderSMTResult s@(SBV.Satisfiable _ _) =
   let dict = SBV.getModelDictionary s
   in
@@ -128,7 +129,7 @@ data SolvedState = SolvedState SymState SBV.SMTResult
 solveSym :: Trace -> IO (Tree.Tree SolvedState)
 solveSym (Tree.Node state c) = do
     let smtExpr = toSMT (pathConstraintList state)
-    SBV.SatResult smtRes <- SBV.satWith prover smtExpr
+    SBV.SatResult smtRes <- SBV.satWith prover (smtExpr)
     children <- traverse solveSym c
     pure $ Tree.Node (SolvedState state smtRes) children
 

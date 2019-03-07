@@ -79,13 +79,13 @@ symStep state =
               readRegister reg >>= writeMemory addr
           Add reg addr -> singleton . fromJust $ semanticsM i readKey writeKey
           Jump offset -> singleton . fromJust $ semanticsM i readKey writeKey
-          JumpZero offset ->
-            let isZero = SEq ((Map.!) (flags state) Zero) (SConst 0)
-            -- The computation branches and we return a list of two possible states:
-            in [ do appendConstraint isZero
-                    fromJust $ semanticsM (Jump offset) readKey writeKey
-               , appendConstraint (SNot isZero)
-               ]
+          JumpZero offset -> singleton . fromJust $ semanticsM i readKey writeKey
+            -- let isZero = SEq ((Map.!) (flags state) Zero) (SConst 0)
+            -- -- The computation branches and we return a list of two possible states:
+            -- in [ do appendConstraint isZero
+            --         fromJust $ semanticsM (Jump offset) readKey writeKey
+            --    , appendConstraint (SNot isZero)
+            --    ]
           Sub reg addr -> singleton . fromJust $ semanticsM i readKey writeKey
           Mod reg addr -> singleton . fromJust $ semanticsM i readKey writeKey
           Mul reg addr -> singleton . fromJust $ semanticsM i readKey writeKey
@@ -193,6 +193,7 @@ writeFlag flag value = do
     delay 1
     modify $ \currentState ->
         currentState {
+            
             flags = Map.adjust (const value) flag (flags currentState)}
 
 -- --------------------------------------------------------------------------------
