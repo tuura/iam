@@ -119,7 +119,7 @@ semanticsM :: MachineValue a => Instruction
 semanticsM i = case i of
     Halt            -> semanticsS i
     Load   _ _      -> semanticsS i
-    LoadMI reg addr -> loadMI reg addr
+    LoadMI reg addr -> undefined -- loadMI reg addr
     Set reg simm8   -> setA reg simm8
     Store  _ _      -> semanticsS i
     Add reg addr    -> addS reg addr
@@ -262,9 +262,9 @@ jump simm read write = Just $
 
 -- | Indirect memory access.
 --   Monadic.
-loadMI :: MachineValue a => Register -> MemoryAddress
-                         -> Semantics Monad MachineKey a ()
-loadMI reg addr read write = undefined
+-- loadMI :: MachineValue a => Register -> MemoryAddress
+--                          -> Semantics Monad MachineKey a ()
+-- loadMI = undefined
     -- Just $ do
     -- addr' <- read (Addr addr)
     -- write (Reg reg) (read (Addr addr'))
@@ -273,9 +273,8 @@ loadMI reg addr read write = undefined
 --   Selective.
 jumpZero :: MachineValue a => SImm8 -> Semantics Selective MachineKey a ()
 jumpZero simm read write = Just $
-    ifS (unsafeToBool <$> (eq <$> read (F Zero) <*> pure 0))
-        (write IC (fmap ((+) . unsafeFromSImm8 $ simm) (read IC)))
-        (write IC $ read IC)
+    whenS (unsafeToBool <$> (eq <$> read (F Zero) <*> pure 0))
+          (write IC (fmap ((+) . unsafeFromSImm8 $ simm) (read IC)))
 --------------------------------------------------------------------------------
 executeInstruction :: Semantics Monad MachineKey Value ()
 executeInstruction = \read write -> Just $ do
