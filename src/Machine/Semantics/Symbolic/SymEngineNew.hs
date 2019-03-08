@@ -2,12 +2,14 @@
 
 module Machine.Semantics.Symbolic.SymEngineNew where
 
+import Data.Word (Word16)
 import System.IO.Unsafe (unsafePerformIO)
 import Prelude hiding (Monad)
 import qualified Prelude (Monad)
 import Data.Maybe (fromJust)
 import qualified Data.Tree as Tree
 import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 import Control.Selective
 import Control.Monad (ap, return, (>>=))
 import Control.Monad.State hiding (Monad)
@@ -227,13 +229,13 @@ writeRegister register value = do
 -- | Lookup the value of a given 'Flag'. If the flag is not currently assigned
 -- any value, it is assumed to be 'False'.
 readFlag :: Flag -> SymEngine Sym
-readFlag flag = -- do
---     currentState <- getState
---     pure $ (Map.!) (flags currentState) flag
-    SymEngine $ \s ->
-        let v = (Map.!) (flags s) flag
-        in [ (v, appendConstraints [v] s)
-           , (v, appendConstraints [(SNot v)] s)]
+readFlag flag = do
+    currentState <- getState
+    pure $ (Map.!) (flags currentState) flag
+    -- SymEngine $ \s ->
+    --     let v = (Map.!) (flags s) flag
+    --     in [ (v, appendConstraints [v] s)
+    --        , (v, appendConstraints [(SNot v)] s)]
 
 -- | Set a given 'Flag' to the specified Boolean value.
 --   We assume that it takes 1 clock cycle to access
@@ -431,12 +433,47 @@ addExampleSMT = do
         y = SAny 1
         mem = initialiseMemory [(0, x), (1, y)]
         initialState = boot prog mem
-        trace = runModel steps initialState
+        s = appendConstraints [ SLt x (SConst 10), SLt y (SConst 10)
+                              , SGt x (SConst 0), SGt y (SConst 0)
+                              ] initialState
+        trace = runModel steps s
     s <- solveSym (overflow trace)
     putStrLn $ Tree.drawTree $ fmap renderSolvedState s
 
 overflow :: Trace -> Trace
 overflow (Tree.Node state children) =
-    let state' = state {pathConstraintList =
-                    SEq ((Map.!) (flags state) Overflow) (SConst 1) : pathConstraintList state}
+    let cs = pathConstraintList state
+        state' = state {pathConstraintList = overflowNotSet state : cs}
     in Tree.Node state' (overflow <$> children)
+
+noZero :: Trace -> Trace
+noZero (Tree.Node state children) =
+    let cs = pathConstraintList state
+        state' = state {pathConstraintList = zeroNotSet state : cs}
+    in Tree.Node state' (noZero <$> children)
+
+zeroNotSet :: SymState -> Sym
+zeroNotSet s = (SEq ((Map.!) (flags s) Zero) (SConst 0))
+
+overflowNotSet :: SymState -> Sym
+overflowNotSet s = SEq ((Map.!) (flags s) Overflow) (SConst 0)
+
+subExampleSMT :: IO ()
+subExampleSMT = do
+    let prog = assemble $ [ Load R0 0
+                          , Sub  R0 1
+                          , Halt
+                          ]
+        steps = 10
+        -- x = SConst 2 -- SAny 0
+        -- y = SConst 3 -- SAny 1
+        x = SAny 0
+        y = SAny 1
+        mem = initialiseMemory [(0, x), (1, y)]
+        initialState = boot prog mem
+        s = appendConstraints [ x `SGt` 20, x `SLt` 30
+                              , y `SGt` 0, y `SLt` 10
+                              ] initialState
+        trace = runModel steps s
+    s <- solveSym (noZero trace)
+    putStrLn $ Tree.drawTree $ fmap renderSolvedState s

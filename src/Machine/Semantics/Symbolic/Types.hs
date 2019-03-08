@@ -12,6 +12,7 @@ import Machine.Instruction.Decode
 import Machine.Instruction.Encode
 import Machine.Program hiding (readProgram)
 import Data.Word (Word8)
+import Data.Int (Int16)
 
 -- | Symbolic expressions
 data Sym = SAdd Sym Sym
@@ -19,7 +20,7 @@ data Sym = SAdd Sym Sym
          | SDiv Sym Sym
          | SMod Sym Sym
          | SAbs Sym
-         | SConst Value
+         | SConst Int16
          | SAnd Sym Sym
          | SOr Sym Sym
          | SAny Int     -- Any value or the set of all values

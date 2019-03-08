@@ -214,7 +214,8 @@ addS reg addr = \read write -> Just $
         -- o  = or <$> (and <$> o1 <*> o2)
         --         <*> (and <$> o3 <*> o4)
     in  write (F Overflow) o *>
-        write (Reg reg) result
+        write (Reg reg) result *>
+        write (F Zero)  result
 
 -- | A pure check for integer overflow during addition.
 willOverflowPure :: MachineValue a => a -> a -> a
