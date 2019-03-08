@@ -7,7 +7,7 @@ import Data.Monoid
 import Control.Monad.Reader (ask)
 import Control.Monad.Trans (liftIO)
 import qualified Data.SBV.Dynamic as SBV
-import Data.SBV (constrain, SBool)
+import Data.SBV (constrain, SBool, (.<))
 
 import Machine.Types
 import Machine.Instruction.Decode
@@ -16,7 +16,7 @@ import Machine.Semantics.Symbolic.Types
 type SValMap = Map.Map Int (SBV.Symbolic SBV.SVal)
 
 -- | Walk the constraint gathering up the free
--- | variablesBV.
+-- | variables.
 gatherFree :: Sym -> Set.Set Sym
 gatherFree c@(SAny _) = Set.singleton c
 gatherFree (SAdd l r) = gatherFree l <> gatherFree r
@@ -32,31 +32,43 @@ gatherFree (SGt l r)  = gatherFree l <> gatherFree r
 gatherFree (SLt l r)  = gatherFree l <> gatherFree r
 gatherFree (SConst _)   = mempty
 
+-- -- | Create an existential word of `i` bits with
+-- -- | the name `name`.
+-- sWordEx :: Int -> String -> SBV.Symbolic SBV.SVal
+-- sWordEx i name =  ask >>= liftIO . SBV.svMkSymVar (Just SBV.EX) (SBV.KBounded True i) (Just name)
+
 -- | Create an existential word of `i` bits with
 -- | the name `name`.
 sWordEx :: Int -> String -> SBV.Symbolic SBV.SVal
-sWordEx i name =  ask >>= liftIO . SBV.svMkSymVar (Just SBV.EX) (SBV.KBounded True i) (Just name)
+sWordEx = SBV.sIntN
 
--- | Create existential SVals for each of CAny's in the input.
+-- | Create existential SVals for each of SAny's in the input.
 createSym :: [Sym] -> SBV.Symbolic (Map.Map Int SBV.SVal)
 createSym cs = do
   pairs <- traverse createSymPair cs
-  pure $  Map.fromList pairs
-  where readableName i = valName $ i
-        createSymPair (SAny i) = do
-          v <- sWordEx 16 (readableName i)
-          pure (i, v)
-        createSymPair _ = error "Non-variable encountered."
+  pure $ Map.fromList pairs
+    where readableName i = valName $ i
+          createSymPair (SAny i) = do
+            v <- sWordEx 16 (readableName i)
+            -- constrain $ SBV ()
+            -- let v' = SBV.svLessThan v (valueToSVal 10)
+            pure (i, v)
+          createSymPair _ = error "Non-variable encountered."
 
 -- | Convert a list of path constraints to a
 -- | symbolic value the SMT solver can solve.
 -- | Each constraint in the list is conjoined
 -- | with the others.
 toSMT :: [Sym] -> SBV.Symbolic SBV.SVal
-toSMT c = do
-  let freeVars = gatherFree (foldr SAnd (SConst 1) c)
+toSMT cs = do
+  let freeVars = gatherFree (foldr SAnd (SConst 1) cs)
+  -- liftIO $ print $ cs'
+  -- let constr = (\x acc-> SAnd (SAnd x (SLt x (SConst 10))) acc)
+  --     freeVars = gatherFree (foldr constr (SConst 1) c)
   sValMap <- createSym (Set.toList freeVars)
-  smts <- traverse (symToSMT sValMap) c
+  -- let lt10 c = SAnd (SLt c (SConst 10)) c
+  smts <- traverse (symToSMT sValMap) cs
+
   pure $ conjoin smts
 
 symToSMT :: Map.Map Int SBV.SVal -> Sym -> SBV.Symbolic SBV.SVal
@@ -74,7 +86,7 @@ symToSMT m (SDiv l r) =
   SBV.svQuot <$> symToSMT m l <*> symToSMT m r
 symToSMT m (SMod l r) =
   SBV.svRem <$> symToSMT m l <*> symToSMT m r
-symToSMT _ (SConst w) =  pure $ valueToSVal w
+symToSMT _ (SConst w) = pure $ valueToSVal w
 symToSMT m (SAbs l) =
   SBV.svAbs <$> symToSMT m l
 symToSMT m (SNot c) =
@@ -129,6 +141,7 @@ data SolvedState = SolvedState SymState SBV.SMTResult
 solveSym :: Trace -> IO (Tree.Tree SolvedState)
 solveSym (Tree.Node state c) = do
     let smtExpr = toSMT (pathConstraintList state)
+    print (pathConstraintList state)
     SBV.SatResult smtRes <- SBV.satWith prover (smtExpr)
     children <- traverse solveSym c
     pure $ Tree.Node (SolvedState state smtRes) children
@@ -142,5 +155,5 @@ valName i = "val_" <> (show i)
 prover :: SBV.SMTConfig
 prover = SBV.z3 { SBV.verbose = True
                 , SBV.redirectVerbose = Just "log.smt2"
-                , SBV.printBase = 10
+                , SBV.printBase = 16
                 }
