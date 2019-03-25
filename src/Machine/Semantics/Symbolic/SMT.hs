@@ -128,8 +128,11 @@ renderSolvedState (SolvedState state c) =
   "IR: " <> show (decode $ instructionRegister state) <> "\n" <>
   "Flags: " <> show (Map.toList $ flags state) <> "\n" <>
 --   "Stack: " <> show (renderSym <$> st) <> "\n" <>
-  "Path Constraints: " <> show (foldr SAnd (SConst 1) (pathConstraintList state)) <> "\n" <>
+  "Path Constraints: \n" <> renderPathConstraints (pathConstraintList state) <> "\n" <>
   "Solved Values: " <> renderSMTResult c
+
+renderPathConstraints :: [Sym] -> String
+renderPathConstraints xs = foldr (\x acc -> "  && " <> show x <> "\n" <> acc) "" xs
 
 renderDict :: (Show v) => Map.Map String v -> String
 renderDict m =
@@ -141,7 +144,6 @@ data SolvedState = SolvedState SymState SBV.SMTResult
 solveSym :: Trace -> IO (Tree.Tree SolvedState)
 solveSym (Tree.Node state c) = do
     let smtExpr = toSMT (pathConstraintList state)
-    print (pathConstraintList state)
     SBV.SatResult smtRes <- SBV.satWith prover (smtExpr)
     children <- traverse solveSym c
     pure $ Tree.Node (SolvedState state smtRes) children
