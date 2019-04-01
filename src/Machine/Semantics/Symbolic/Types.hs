@@ -13,6 +13,7 @@ import Machine.Instruction.Encode
 import Machine.Program hiding (readProgram)
 import Data.Word (Word8)
 import Data.Int (Int16)
+import qualified Algebra.Graph as G
 
 -- | Symbolic expressions
 data Sym = SAdd Sym Sym
@@ -61,28 +62,28 @@ data SymState = SymState { registers         :: Map.Map Register Sym
                          , clock :: Clock
 
                          , pathConstraintList :: [Sym]
-                         }
+                         } deriving (Eq, Ord)
+
+renderSymState :: SymState -> String
+renderSymState state =
+  "IC: " <> show (instructionCounter state) <> "\n" <>
+  "IR: " <> show (decode $ instructionRegister state) <> "\n" <>
+  "Flags: " <> show (Map.toList $ flags state) <> "\n" <>
+  "Path Constraints: \n" <> renderPathConstraints (pathConstraintList state) <> "\n"
+  where
+    renderPathConstraints :: [Sym] -> String
+    renderPathConstraints xs = foldr (\x acc -> " && " <> show x <> "\n" <> acc) "" xs
+
+-- instance Show SymState where
+--     show state = unlines [ "IC: " <> show (instructionCounter state)
+--                          , "IR: " <> show (decode $ instructionRegister state)
+--                          , "Registers: " <> show (Map.toList $ registers state)
+--                          , "Flags: " <> show (Map.toList $ flags state)
+--                          , "Constraints: " <> show (pathConstraintList state)
+--                          ]
 
 instance Show SymState where
-    show state = unlines [ "IC: " <> show (instructionCounter state)
-                         , "IR: " <> show (decode $ instructionRegister state)
-                         , "Registers: " <> show (Map.toList $ registers state)
-                         , "Flags: " <> show (Map.toList $ flags state)
-                         , "Constraints: " <> show (pathConstraintList state)
-                         ]
-
--- mergeStates :: SymState -> SymState -> SymState
--- mergeStates (SymState regs1 ic1 ir1 flags1 memory1 prog1 clock1 constraints1)
---             (SymState regs2 ic2 ir2 flags2 memory2 prog2 clock2 constraints2) =
---     let regs' = mergeSym <$> regs1 <*> regs2
---         ic' = ic
---         ir' =
---         flags1' =
---         memory1' =
---         prog1' =
---         clock1' =
---         constraints1' =
-
+    show state = show (instructionCounter state)
 
 newtype Computation a = Computation { unComputation :: State SymState a }
 -- newtype Computation a = Computation { unComputation :: State SymState [a] }
@@ -92,6 +93,8 @@ runComputation (Computation c) initState = runState c initState
 
 -- | The symbolic execution trace
 type Trace = Tree.Tree SymState
+
+type GTrace = G.Graph SymState
 
 emptyRegisters :: Map.Map Register Sym
 emptyRegisters = Map.fromList $ zip [R0, R1, R2, R3] (map SConst [0, 0..])
@@ -107,7 +110,7 @@ initialiseMemory vars =
 boot :: Program -> Map.Map Word8 Sym -> SymState
 boot prog mem = SymState { registers = emptyRegisters
                          , instructionCounter = 0
-                         , instructionRegister = 0 -- encode $ Jump 0
+                         , instructionRegister = encode $ Jump 0
                          , program = prog
                          , flags = emptyFlags
                          , memory = mem

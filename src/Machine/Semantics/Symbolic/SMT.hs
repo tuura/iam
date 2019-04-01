@@ -16,7 +16,7 @@ import Machine.Semantics.Symbolic.Types
 type SValMap = Map.Map Int (SBV.Symbolic SBV.SVal)
 
 -- | Walk the constraint gathering up the free
--- | variables.
+--   variables.
 gatherFree :: Sym -> Set.Set Sym
 gatherFree c@(SAny _) = Set.singleton c
 gatherFree (SAdd l r) = gatherFree l <> gatherFree r
@@ -32,13 +32,8 @@ gatherFree (SGt l r)  = gatherFree l <> gatherFree r
 gatherFree (SLt l r)  = gatherFree l <> gatherFree r
 gatherFree (SConst _)   = mempty
 
--- -- | Create an existential word of `i` bits with
--- -- | the name `name`.
--- sWordEx :: Int -> String -> SBV.Symbolic SBV.SVal
--- sWordEx i name =  ask >>= liftIO . SBV.svMkSymVar (Just SBV.EX) (SBV.KBounded True i) (Just name)
-
 -- | Create an existential word of `i` bits with
--- | the name `name`.
+--   the name `name`.
 sWordEx :: Int -> String -> SBV.Symbolic SBV.SVal
 sWordEx = SBV.sIntN
 
@@ -50,23 +45,17 @@ createSym cs = do
     where readableName i = valName $ i
           createSymPair (SAny i) = do
             v <- sWordEx 16 (readableName i)
-            -- constrain $ SBV ()
-            -- let v' = SBV.svLessThan v (valueToSVal 10)
             pure (i, v)
           createSymPair _ = error "Non-variable encountered."
 
 -- | Convert a list of path constraints to a
--- | symbolic value the SMT solver can solve.
--- | Each constraint in the list is conjoined
--- | with the others.
+--   symbolic value the SMT solver can solve.
+--   Each constraint in the list is conjoined
+--   with the others.
 toSMT :: [Sym] -> SBV.Symbolic SBV.SVal
 toSMT cs = do
   let freeVars = gatherFree (foldr SAnd (SConst 1) cs)
-  -- liftIO $ print $ cs'
-  -- let constr = (\x acc-> SAnd (SAnd x (SLt x (SConst 10))) acc)
-  --     freeVars = gatherFree (foldr constr (SConst 1) c)
   sValMap <- createSym (Set.toList freeVars)
-  -- let lt10 c = SAnd (SLt c (SConst 10)) c
   smts <- traverse (symToSMT sValMap) cs
 
   pure $ conjoin smts
@@ -118,8 +107,7 @@ renderSMTResult :: SBV.SMTResult -> String
 renderSMTResult (SBV.Unsatisfiable _ _) = "Unsatisfiable"
 renderSMTResult s@(SBV.Satisfiable _ _) =
   let dict = SBV.getModelDictionary s
-  in
-    if Map.null dict then "Trivial" else renderDict dict
+  in  if Map.null dict then "Trivial" else renderDict dict
 renderSMTResult _ = "Error"
 
 renderSolvedState :: SolvedState -> String
@@ -127,9 +115,11 @@ renderSolvedState (SolvedState state c) =
   "IC: " <> show (instructionCounter state) <> "\n" <>
   "IR: " <> show (decode $ instructionRegister state) <> "\n" <>
   "Flags: " <> show (Map.toList $ flags state) <> "\n" <>
---   "Stack: " <> show (renderSym <$> st) <> "\n" <>
-  "Path Constraints: " <> show (foldr SAnd (SConst 1) (pathConstraintList state)) <> "\n" <>
+  "Path Constraints: \n" <> renderPathConstraints (pathConstraintList state) <> "\n" <>
   "Solved Values: " <> renderSMTResult c
+  where
+    renderPathConstraints :: [Sym] -> String
+    renderPathConstraints xs = foldr (\x acc -> " && " <> show x <> "\n" <> acc) "" xs
 
 renderDict :: (Show v) => Map.Map String v -> String
 renderDict m =
@@ -141,7 +131,7 @@ data SolvedState = SolvedState SymState SBV.SMTResult
 solveSym :: Trace -> IO (Tree.Tree SolvedState)
 solveSym (Tree.Node state c) = do
     let smtExpr = toSMT (pathConstraintList state)
-    print (pathConstraintList state)
+    -- print (pathConstraintList state)
     SBV.SatResult smtRes <- SBV.satWith prover (smtExpr)
     children <- traverse solveSym c
     pure $ Tree.Node (SolvedState state smtRes) children
